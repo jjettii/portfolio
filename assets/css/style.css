@@ -1,0 +1,224 @@
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    color: #000;
+    background: #fff;
+    line-height: 1.6;
+}
+
+/* Sidebar Navigation */
+.sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 200px;
+    height: 100vh;
+    padding: 40px 30px;
+    display: flex;
+    flex-direction: column;
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: bold;
+    color: #000;
+    text-decoration: none;
+    margin-bottom: 60px;
+    display: block;
+}
+
+.nav-links {
+    list-style: none;
+}
+
+.nav-links li {
+    margin-bottom: 20px;
+}
+
+.nav-links a {
+    color: #000;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    transition: opacity 0.3s;
+}
+
+.nav-links a:hover,
+.nav-links a.active {
+    opacity: 0.5;
+}
+
+/* Main Content Area */
+.content {
+    margin-left: 200px;
+    padding: 60px 80px;
+    max-width: 1400px;
+}
+
+/* Hero Section */
+.hero {
+    margin-bottom: 60px;
+}
+
+.hero-image {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* Intro Section */
+.intro {
+    max-width: 800px;
+    margin-bottom: 80px;
+}
+
+.intro h1 {
+    font-size: 42px;
+    font-weight: 300;
+    margin-bottom: 20px;
+    line-height: 1.2;
+}
+
+.intro p {
+    font-size: 18px;
+    color: #666;
+}
+
+/* Video Section */
+.video-section h1 {
+    font-size: 42px;
+    font-weight: 300;
+    margin-bottom: 40px;
+}
+
+.video-container {
+    position: relative;
+    padding-bottom: 56.25%; /* 16:9 aspect ratio */
+    height: 0;
+    overflow: hidden;
+    margin-bottom: 40px;
+    background: #000;
+}
+
+.video-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* About Section */
+.about-section {
+    max-width: 1000px;
+}
+
+.about-image {
+    width: 100%;
+    max-width: 600px;
+    height: auto;
+    margin-bottom: 40px;
+}
+
+.about-text h1 {
+    font-size: 42px;
+    font-weight: 300;
+    margin-bottom: 30px;
+}
+
+.about-text p {
+    font-size: 18px;
+    line-height: 1.8;
+    margin-bottom: 20px;
+    color: #333;
+    max-width: 700px;
+}
+
+/* Contact Section */
+.contact-section h1 {
+    font-size: 42px;
+    font-weight: 300;
+    margin-bottom: 40px;
+}
+
+.contact-info {
+    margin-bottom: 40px;
+}
+
+.contact-info p {
+    font-size: 18px;
+    margin-bottom: 15px;
+}
+
+.contact-info a {
+    color: #000;
+    text-decoration: none;
+    border-bottom: 1px solid #000;
+    transition: opacity 0.3s;
+}
+
+.contact-info a:hover {
+    opacity: 0.5;
+}
+
+.social-links {
+    display: flex;
+    gap: 30px;
+}
+
+.social-links a {
+    color: #000;
+    text-decoration: none;
+    font-size: 16px;
+    transition: opacity 0.3s;
+}
+
+.social-links a:hover {
+    opacity: 0.5;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        padding: 20px;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .logo {
+        margin-bottom: 0;
+    }
+
+    .nav-links {
+        display: flex;
+        gap: 20px;
+    }
+
+    .nav-links li {
+        margin-bottom: 0;
+    }
+
+    .content {
+        margin-left: 0;
+        padding: 40px 20px;
+    }
+
+    .intro h1,
+    .video-section h1,
+    .about-text h1,
+    .contact-section h1 {
+        font-size: 32px;
+    }
+}
