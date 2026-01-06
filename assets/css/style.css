@@ -5,8 +5,22 @@
     box-sizing: border-box;
 }
 
+@font-face {
+    font-family: 'YoungSerif';
+    src: url('../fonts/YoungSerif-Regular.woff2') format('woff2');
+    font-weight: 400; 
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'FanwoodText';
+    src: url('../fonts/FanwoodText.otf') format('opentype');
+    font-weight: 400;
+    font-style: normal;
+}
+
 body {
-    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'FanwoodText', serif;
     color: #000;
     background: #fff;
     line-height: 1.6;
@@ -14,6 +28,7 @@ body {
 
 /* Sidebar Navigation */
 .sidebar {
+    font-family: 'YoungSerif', serif;
     position: fixed;
     left: 0;
     top: 0;
@@ -24,12 +39,22 @@ body {
     flex-direction: column;
 }
 
+h1, h2, h3 {
+    font-family: 'YoungSerif', serif;
+}
+
 .logo {
     font-size: 24px;
     font-weight: bold;
     color: #000;
     text-decoration: none;
-    margin-bottom: 60px;
+    margin-bottom: 40px;
+    display: block;
+}
+
+.logo img {
+    max-width: 100%;
+    height: auto;
     display: block;
 }
 
@@ -38,7 +63,7 @@ body {
 }
 
 .nav-links li {
-    margin-bottom: 20px;
+    margin-bottom: 5px;
 }
 
 .nav-links a {
@@ -60,6 +85,27 @@ body {
     margin-left: 200px;
     padding: 60px 80px;
     max-width: 1400px;
+}
+
+/* Page Switching */
+.page {
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.page.active {
+    display: block;
+    animation: fadeIn 0.3s ease forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
 /* Hero Section */
@@ -201,6 +247,12 @@ body {
         margin-bottom: 0;
     }
 
+    .logo img {
+        max-width: 100%;
+        height: auto;
+        display: block;
+    }
+
     .nav-links {
         display: flex;
         gap: 20px;
@@ -221,4 +273,56 @@ body {
     .contact-section h1 {
         font-size: 32px;
     }
+}
+
+/* Contact Form */
+.contact-form {
+    max-width: 600px;
+    margin-top: 40px;
+}
+
+.form-group {
+    margin-bottom: 25px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    font-family: 'FanwoodText', serif;
+    font-size: 16px;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #000;
+}
+
+.contact-form button {
+    padding: 12px 40px;
+    background: #000;
+    color: #fff;
+    border: none;
+    font-family: 'YoungSerif', serif;
+    font-size: 14px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: opacity 0.3s;
+}
+
+.contact-form button:hover {
+    opacity: 0.8;
 }

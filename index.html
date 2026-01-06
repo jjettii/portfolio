@@ -3,30 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jordan Ettinger</title>
+    <title>Your Name - Videographer</title>
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
     <nav class="sidebar">
-        <a href="index.html" class="logo">JORDAN ETTINGER</a>
+        <a href="#home" class="logo" data-page="home">
+            <img src="assets/img/logo.png" alt="Jordan Ettinger">
+        </a>
         
         <ul class="nav-links">
-            <li><a href="index.html" class="active">HOME</a></li>
-            <li><a href="reel.html">REEL</a></li>
-            <li><a href="about.html">ABOUT</a></li>
-            <li><a href="contact.html">CONTACT</a></li>
+            <li><a href="#home" data-page="home" class="nav-link active">Home</a></li>
+            <li><a href="#reel" data-page="reel" class="nav-link">Reel</a></li>
+            <li><a href="#about" data-page="about" class="nav-link">About</a></li>
+            <li><a href="#contact" data-page="contact" class="nav-link">Contact</a></li>
         </ul>
     </nav>
 
     <main class="content">
-        <section class="hero">
-            <img src="assets/img/hero.jpg" alt="Hero image" class="hero-image">
+        <!-- HOME PAGE -->
+        <section id="home-page" class="page active">
+            <div class="hero">
+                <img src="assets/img/hero.jpg" alt="Hero image" class="hero-image">
+            </div>
+
+            <div class="intro">
+                <h1>Creating compelling visual stories</h1>
+                <p>Your tagline or brief introduction goes here.</p>
+            </div>
         </section>
 
-        <section class="intro">
-            <h1>Creating compelling visual stories</h1>
-            <p>Your tagline or brief introduction goes here.</p>
+        <!-- DEMO REEL PAGE -->
+        <section id="reel-page" class="page">
+            <div class="video-section">
+                <h1>Demo Reel</h1>
+                
+                <!-- Example YouTube embed -->
+                <div class="video-container">
+                    <iframe src="https://www.youtube.com/embed/YOUR_VIDEO_ID" 
+                            frameborder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                            allowfullscreen>
+                    </iframe>
+                </div>
+
+                <!-- Example Vimeo embed -->
+                <!-- <div class="video-container">
+                    <iframe src="https://player.vimeo.com/video/YOUR_VIDEO_ID" 
+                            frameborder="0" 
+                            allow="autoplay; fullscreen; picture-in-picture" 
+                            allowfullscreen>
+                    </iframe>
+                </div> -->
+
+                <!-- Add more video containers as needed -->
+            </div>
+        </section>
+
+        <!-- ABOUT PAGE -->
+        <section id="about-page" class="page">
+            <div class="about-section">
+                <img src="assets/img/about.jpg" alt="About photo" class="about-image">
+                
+                <div class="about-text">
+                    <h1>About Me</h1>
+                    <p>Your bio and background goes here. Talk about your experience, approach to videography, and what drives your work.</p>
+                    <p>Add more paragraphs as needed to tell your story.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- CONTACT PAGE -->
+        <section id="contact-page" class="page">
+            <div class="contact-section">
+                <h1>Get In Touch</h1>
+                
+                <form class="contact-form" action="https://api.web3forms.com/submit" method="POST">
+                    <input type="hidden" name="access_key" value="8d079e92-7b30-4c12-ab0c-d18a26d48dbc">
+                    
+                    <div class="form-group">
+                        <label for="name">Name</label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="message">Message</label>
+                        <textarea id="message" name="message" rows="6" required></textarea>
+                    </div>
+                    
+                    <button type="submit">Send Message</button>
+                </form>
+            </div>
         </section>
     </main>
+
+    <script src="assets/js/main.js"></script>
 </body>
 </html>
