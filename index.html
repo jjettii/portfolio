@@ -8,27 +8,25 @@
 </head>
 <body>
     <nav class="sidebar">
-        <a href="#home" class="logo" data-page="home">
+        <a href="index.html" class="logo">
             <img src="assets/img/logo.png" alt="Jordan Ettinger">
         </a>
-        
+
         <ul class="nav-links">
-            <li><a href="#home" data-page="home" class="nav-link active">Home</a></li>
-            <li><a href="#reel" data-page="reel" class="nav-link">Reel</a></li>
-            <li><a href="#about" data-page="about" class="nav-link">About</a></li>
-            <li><a href="#contact" data-page="contact" class="nav-link">Contact</a></li>
+            <li><a href="index.html" class="nav-link">Home</a></li>
+            <li><a href="reel.html" class="nav-link">Reel</a></li>
+            <li><a href="about.html" class="nav-link">About</a></li>
+            <li><a href="contact.html" class="nav-link">Contact</a></li>
         </ul>
     </nav>
 
     <main class="content">
-        <!-- HOME PAGE -->
-        <section id="home-page" class="page active">
-            <div class="intro">
-                <h1>Jordan Ettinger</h1>
-                <p>Video Production</p> <!-- For a tagline-->
-            </div>
+        <div class="intro">
+            <h1>Jordan Ettinger</h1>
+            <p></p> <!--Sub heading-->
+        </div>
 
-            <div class="video-grid">
+        <div class="video-grid">
                 <!-- Video Item 1 - Havn -->
                 <div class="video-item" data-video-id="havn">
                     <img src="assets/img/HAVN.webp" alt="Havn" class="video-poster">
@@ -95,80 +93,7 @@
                     </div>
                 </div>
 
-                <!-- Add more video items as needed -->
-            </div>
-        </section>
-
-        <!-- DEMO REEL PAGE -->
-        <section id="reel-page" class="page">
-            <div class="video-section">
-                <h1>Demo Reel</h1>
-                
-                <!-- Video -->
-                <div style="position: relative; padding-top: 56.25%;">
-                <iframe
-                    src="https://customer-fnbjpmdrtp308rc1.cloudflarestream.com/199cfa1c0fa1d9f1b509f0fb05942457/iframe?preload=true&poster=https%3A%2F%2Fcustomer-fnbjpmdrtp308rc1.cloudflarestream.com%2F199cfa1c0fa1d9f1b509f0fb05942457%2Fthumbnails%2Fthumbnail.jpg%3Ftime%3D9.3s%26height%3D600"
-                    loading="lazy"
-                    style="border: none; position: absolute; top: 0; left: 0; height: 100%; width: 100%;"
-                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-                    allowfullscreen="true"
-                ></iframe>
-                </div>
-
-
-                <!-- Example Vimeo embed -->
-                <!-- <div class="video-container">
-                    <iframe src="https://player.vimeo.com/video/YOUR_VIDEO_ID" 
-                            frameborder="0" 
-                            allow="autoplay; fullscreen; picture-in-picture" 
-                            allowfullscreen>
-                    </iframe>
-                </div> -->
-
-                <!-- Add more video containers as needed -->
-            </div>
-        </section>
-
-        <!-- ABOUT PAGE -->
-        <section id="about-page" class="page">
-            <div class="about-section">
-                <img src="assets/img/about.jpg" alt="About photo" class="about-image">
-                
-                <div class="about-text">
-                    <h1>About Me</h1>
-                    <p>Your bio and background goes here. Talk about your experience, approach to videography, and what drives your work.</p>
-                    <p>Add more paragraphs as needed to tell your story.</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- CONTACT PAGE -->
-        <section id="contact-page" class="page">
-            <div class="contact-section">
-                <h1>Get In Touch</h1>
-                
-                <form class="contact-form" action="https://api.web3forms.com/submit" method="POST">
-                    <input type="hidden" name="access_key" value="8d079e92-7b30-4c12-ab0c-d18a26d48dbc">
-                    
-                    <div class="form-group">
-                        <label for="name">Name</label>
-                        <input type="text" id="name" name="name" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="email">Email</label>
-                        <input type="email" id="email" name="email" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="message">Message</label>
-                        <textarea id="message" name="message" rows="6" required></textarea>
-                    </div>
-                    
-                    <button type="submit">Send Message</button>
-                </form>
-            </div>
-        </section>
+        </div>
     </main>
 
     <script src="assets/js/main.js"></script>
