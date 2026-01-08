@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your Name - Videographer</title>
+    <title>Jordan Ettinger - Video Production</title>
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
@@ -23,13 +23,79 @@
     <main class="content">
         <!-- HOME PAGE -->
         <section id="home-page" class="page active">
-            <div class="hero">
-                <img src="assets/img/hero.jpg" alt="Hero image" class="hero-image">
+            <div class="intro">
+                <h1>Jordan Ettinger</h1>
+                <p>Video Production</p> <!-- For a tagline-->
             </div>
 
-            <div class="intro">
-                <h1>Creating compelling visual stories</h1>
-                <p>Your tagline or brief introduction goes here.</p>
+            <div class="video-grid">
+                <!-- Video Item 1 - Havn -->
+                <div class="video-item" data-video-id="havn">
+                    <img src="assets/img/HAVN.webp" alt="Havn" class="video-poster">
+                    <video class="video-preview" muted loop preload="none">
+                        <source src="assets/mp4/HAVN.mp4" type="video/mp4">
+                    </video>
+                    <div class="video-overlay">
+                        <h3>HAVN Saunas</h3>
+                    </div>
+                </div>
+
+                <!-- Video Item 2 - Lightwater Cove -->
+                <div class="video-item" data-video-id="lightwater-cove">
+                    <img src="assets/img/Lightwater.webp" alt="Lightwater Cove" class="video-poster">
+                    <video class="video-preview" muted loop preload="none">
+                        <source src="assets/mp4/LightwaterCove.mp4" type="video/mp4">
+                    </video>
+                    <div class="video-overlay">
+                        <h3>Lightwater Cove</h3>
+                    </div>
+                </div>
+
+                <!-- Video Item 3 - Inside The Leather -->
+                <div class="video-item" data-video-id="itl">
+                    <img src="assets/img/ITL.webp" alt="Inside The Leather" class="video-poster">
+                    <video class="video-preview" muted loop preload="none">
+                        <source src="assets/mp4/ITL.mp4" type="video/mp4">
+                    </video>
+                    <div class="video-overlay">
+                        <h3>Inside The Leather</h3>
+                    </div>
+                </div>
+
+                <!-- Video Item 4 - Camp Brand Goods - Edible Underwear -->
+                <div class="video-item" data-video-id="edible-underwear">
+                    <img src="assets/img/EdibleUnderwear.webp" alt="Camp Brand Goods - Edible Underwear" class="video-poster">
+                    <video class="video-preview" muted loop preload="none">
+                        <source src="assets/mp4/EdibleUnderwear.mp4" type="video/mp4">
+                    </video>
+                    <div class="video-overlay">
+                        <h3>Camp Brand Goods - Edible Underwear</h3>
+                    </div>
+                </div>
+
+                <!-- Video Item 5 - Bracelayer -->
+                <div class="video-item" data-video-id="bracelayer">
+                    <img src="assets/img/Bracelayer.webp" alt="Bracelayer" class="video-poster">
+                    <video class="video-preview" muted loop preload="none">
+                        <source src="assets/mp4/Bracelayer.mp4" type="video/mp4">
+                    </video>
+                    <div class="video-overlay">
+                        <h3>Bracelayer</h3>
+                    </div>
+                </div>
+
+                <!-- Video Item 6 - San Poncho -->
+                <div class="video-item" data-video-id="san-poncho">
+                    <img src="assets/img/SanPoncho.webp" alt="San Poncho" class="video-poster">
+                    <video class="video-preview" muted loop preload="none">
+                        <source src="assets/mp4/SanPoncho.mp4" type="video/mp4">
+                    </video>
+                    <div class="video-overlay">
+                        <h3>San Poncho</h3>
+                    </div>
+                </div>
+
+                <!-- Add more video items as needed -->
             </div>
         </section>
 
@@ -38,14 +104,17 @@
             <div class="video-section">
                 <h1>Demo Reel</h1>
                 
-                <!-- Example YouTube embed -->
-                <div class="video-container">
-                    <iframe src="https://www.youtube.com/embed/YOUR_VIDEO_ID" 
-                            frameborder="0" 
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                            allowfullscreen>
-                    </iframe>
+                <!-- Video -->
+                <div style="position: relative; padding-top: 56.25%;">
+                <iframe
+                    src="https://customer-fnbjpmdrtp308rc1.cloudflarestream.com/199cfa1c0fa1d9f1b509f0fb05942457/iframe?preload=true&poster=https%3A%2F%2Fcustomer-fnbjpmdrtp308rc1.cloudflarestream.com%2F199cfa1c0fa1d9f1b509f0fb05942457%2Fthumbnails%2Fthumbnail.jpg%3Ftime%3D9.3s%26height%3D600"
+                    loading="lazy"
+                    style="border: none; position: absolute; top: 0; left: 0; height: 100%; width: 100%;"
+                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                    allowfullscreen="true"
+                ></iframe>
                 </div>
+
 
                 <!-- Example Vimeo embed -->
                 <!-- <div class="video-container">
