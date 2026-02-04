@@ -39,7 +39,13 @@ document.addEventListener('DOMContentLoaded', function() {
             'sheringham': 'sheringham.html',
             'whistlebuoy': 'whistlebuoy.html',
             'anian': 'anian.html',
-            'therun': 'therun.html'
+            'therun': 'therun.html',
+            'villamar': 'villamar.html',
+            'somedays': 'somedays.html',
+            'too-much': 'too-much.html',
+            'steam-mystic': 'steam-mystic.html',
+            'plezzy': 'plezzy.html',
+            'bear-cub': 'bear-cub.html'
         };
 
         videoItems.forEach(item => {
