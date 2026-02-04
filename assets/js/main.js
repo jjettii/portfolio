@@ -26,10 +26,20 @@ document.addEventListener('DOMContentLoaded', function() {
         const projectPages = {
             'havn': 'havn.html',
             'lightwater-cove': 'lightwater-cove.html',
+            'kwench': 'kwench.html',
             'itl': 'inside-the-leather.html',
-            'edible-underwear': 'edible-underwear.html',
+            'san-poncho': 'san-poncho.html',
             'bracelayer': 'bracelayer.html',
-            'san-poncho': 'san-poncho.html'
+            'plr': 'plr.html',
+            'den': 'den.html',
+            'edible-underwear': 'edible-underwear.html',
+            'arcteryx': 'arcteryx.html',
+            'green-acres': 'green-acres.html',
+            'peak-performance': 'peak-performance.html',
+            'sheringham': 'sheringham.html',
+            'whistlebuoy': 'whistlebuoy.html',
+            'anian': 'anian.html',
+            'therun': 'therun.html'
         };
 
         videoItems.forEach(item => {
