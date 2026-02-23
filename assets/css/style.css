@@ -6,21 +6,29 @@
 }
 
 @font-face {
-    font-family: 'YoungSerif';
-    src: url('../fonts/YoungSerif-Regular.woff2') format('woff2');
-    font-weight: 400; 
+    font-family: 'AkzidenzGrotesk';
+    src: url('../fonts/AkzidenzGroteskBE-LightEx.otf') format('opentype');
+    font-weight: 300;
     font-style: normal;
 }
 
 @font-face {
-    font-family: 'FanwoodText';
-    src: url('../fonts/FanwoodText.otf') format('opentype');
+    font-family: 'AkzidenzGrotesk';
+    src: url('../fonts/AkzidenzGroteskBE-Regular.otf') format('opentype');
     font-weight: 400;
     font-style: normal;
 }
 
+@font-face {
+    font-family: 'AkzidenzGrotesk';
+    src: url('../fonts/AkzidenzGroteskBE-BoldEx.otf') format('opentype');
+    font-weight: 700;
+    font-style: normal;
+}
+
+
 body {
-    font-family: 'FanwoodText', serif;
+    font-family: 'AkzidenzGrotesk', sans-serif;
     color: #000;
     background: #fff;
     line-height: 1.6;
@@ -28,19 +36,31 @@ body {
 
 /* Sidebar Navigation */
 .sidebar {
-    font-family: 'YoungSerif', serif;
+    font-family: 'AkzidenzGrotesk', sans-serif;
+    font-weight: 300;
     position: fixed;
     left: 0;
     top: 0;
-    width: 200px;
+    width: 220px;
     height: 100vh;
-    padding: 40px 30px;
+    padding: 25px 40px;
     display: flex;
     flex-direction: column;
+    border-right: 1px solid #000;
 }
 
 h1, h2, h3 {
-    font-family: 'YoungSerif', serif;
+    font-family: 'AkzidenzGrotesk', sans-serif;
+}
+
+h1 {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+p {
+    font-family: 'AkzidenzGrotesk', sans-serif;
+    font-weight: 400;
 }
 
 .logo {
@@ -60,6 +80,7 @@ h1, h2, h3 {
 
 .nav-links {
     list-style: none;
+    margin-top: 10px;
 }
 
 .nav-links li {
@@ -69,10 +90,11 @@ h1, h2, h3 {
 .nav-links a {
     color: #000;
     text-decoration: none;
-    font-size: 18px;
-    font-weight: 500;
+    font-size: 15px;
+    font-weight: 300;
     letter-spacing: 0.5px;
     transition: opacity 0.3s;
+    padding-left: 4px;
 }
 
 .nav-links a:hover,
@@ -82,8 +104,8 @@ h1, h2, h3 {
 
 /* Main Content Area */
 .content {
-    margin-left: 200px;
-    padding: 60px 80px;
+    margin-left: 220px;
+    padding: 60px 40px;
     max-width: 1400px;
 }
 
@@ -115,13 +137,13 @@ body {
 /* Intro Section */
 .intro {
     max-width: 800px;
-    margin-bottom: 20px;
+    margin-bottom: 0;
 }
 
 .intro h1 {
-    font-size: 42px;
-    font-weight: 300;
-    margin-bottom: 5px;
+    font-size: 48px;
+    font-weight: 700;
+    margin-bottom: 25px;
     line-height: 1.2;
 }
 
@@ -197,8 +219,8 @@ body {
 
 /* Video Section */
 .video-section h1 {
-    font-size: 42px;
-    font-weight: 300;
+    font-size: 48px;
+    font-weight: 700;
     margin-bottom: 25px;
     line-height: 1.2;
 }
@@ -229,28 +251,38 @@ body {
     width: 100%;
     max-width: 600px;
     height: auto;
-    margin-bottom: 40px;
+    margin-bottom: 0;
 }
 
 .about-text h1 {
-    font-size: 42px;
-    font-weight: 300;
+    font-size: 48px;
+    font-weight: 700;
+    margin-top: -5px;
     margin-bottom: 25px;
     line-height: 1.2;
 }
 
 .about-text p {
-    font-size: 18px;
-    line-height: 1.8;
+    font-size: 16px;
+    line-height: 1.5;
     margin-bottom: 20px;
     color: #333;
     max-width: 700px;
 }
 
+.photo-credit {
+    margin-bottom: 0 !important;
+}
+
+.photo-credit a {
+    color: #333;
+}
+
 /* Contact Section */
 .contact-section h1 {
-    font-size: 42px;
-    font-weight: 300;
+    font-size: 48px;
+    font-weight: 700;
+    margin-top: -5px;
     margin-bottom: 25px;
     line-height: 1.2;
 }
@@ -260,7 +292,7 @@ body {
 }
 
 .contact-info p {
-    font-size: 18px;
+    font-size: 16px;
     margin-bottom: 15px;
 }
 
@@ -331,7 +363,8 @@ body {
     .intro h1,
     .video-section h1,
     .about-text h1,
-    .contact-section h1 {
+    .contact-section h1,
+    .project-page h1 {
         font-size: 32px;
     }
 
@@ -369,7 +402,7 @@ body {
     width: 100%;
     padding: 12px 15px;
     border: 1px solid #ddd;
-    font-family: 'FanwoodText', serif;
+    font-family: 'AkzidenzGrotesk', sans-serif;
     font-size: 16px;
     transition: border-color 0.3s;
 }
@@ -385,7 +418,7 @@ body {
     background: #000;
     color: #fff;
     border: none;
-    font-family: 'YoungSerif', serif;
+    font-family: 'AkzidenzGrotesk', sans-serif;
     font-size: 14px;
     letter-spacing: 1px;
     text-transform: uppercase;
@@ -403,8 +436,9 @@ body {
 }
 
 .project-page h1 {
-    margin-bottom: 40px;
     font-size: 48px;
+    margin-bottom: 25px;
+    line-height: 1.2;
 }
 
 .project-description {
