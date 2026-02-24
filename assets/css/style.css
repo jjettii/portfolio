@@ -332,12 +332,14 @@ body {
         padding: 20px;
         display: flex;
         flex-direction: row;
-        justify-content: space-between;
+        justify-content: flex-start;
         align-items: center;
+        gap: 24px;
     }
 
     .logo {
         margin-bottom: 0;
+        max-width: 70px;
     }
 
     .logo img {
@@ -348,24 +350,20 @@ body {
 
     .nav-links {
         display: flex;
-        gap: 20px;
+        gap: 24px;
     }
 
     .nav-links li {
         margin-bottom: 0;
     }
 
+    .nav-home {
+        display: none;
+    }
+
     .content {
         margin-left: 0;
         padding: 40px 20px;
-    }
-
-    .intro h1,
-    .video-section h1,
-    .about-text h1,
-    .contact-section h1,
-    .project-page h1 {
-        font-size: 32px;
     }
 
     .video-grid {
@@ -519,5 +517,15 @@ body {
 
     .logo-scroll img {
         height: 75px;
+    }
+}
+
+@media (max-width: 768px) {
+    .content h1 {
+        font-size: 18px;
+    }
+
+    .gallery-grid {
+        grid-template-columns: 1fr;
     }
 }

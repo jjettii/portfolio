@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(xargs sed:*)"
+      "Bash(xargs sed:*)",
+      "Bash(identify:*)",
+      "Bash(python3:*)"
     ]
   }
 }

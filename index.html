@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jordan Ettinger</title>
+    <style>
+        @font-face {
+            font-family: 'AkzidenzGrotesk';
+            src: url('assets/fonts/AkzidenzGroteskBE-LightEx.otf') format('opentype');
+            font-weight: 300;
+            font-style: normal;
+        }
+
+        @font-face {
+            font-family: 'AkzidenzGrotesk';
+            src: url('assets/fonts/AkzidenzGroteskBE-BoldEx.otf') format('opentype');
+            font-weight: 700;
+            font-style: normal;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'AkzidenzGrotesk', sans-serif;
+            background: #fff;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .landing-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .video-box {
+            border: 1px solid #000;
+            padding: 20px;
+        }
+
+        video {
+            display: block;
+            width: 480px;
+            max-width: 90vw;
+            height: auto;
+        }
+
+        .enter-link {
+            font-family: 'AkzidenzGrotesk', sans-serif;
+            font-weight: 300;
+            font-size: 18px;
+            letter-spacing: 0.5px;
+            color: #000;
+            text-decoration: none;
+            transition: opacity 0.3s;
+        }
+
+        .enter-link:hover {
+            opacity: 0.5;
+        }
+
+        .landing-title {
+            font-family: 'AkzidenzGrotesk', sans-serif;
+            font-weight: 700;
+            font-size: 48px;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+            color: #000;
+            margin-bottom: -15px;
+        }
+
+        .landing-logo {
+            display: block;
+            height: 30px;
+            width: auto;
+        }
+
+        @media (max-width: 768px) {
+            .landing-title {
+                font-size: 28px;
+            }
+
+            .landing-wrap {
+                width: 100%;
+                padding: 0 10px;
+            }
+
+            .video-box {
+                width: 100%;
+            }
+
+            video {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="landing-wrap">
+        <a href="home.html" style="text-decoration:none;color:inherit;"><h1 class="landing-title">Jordan Ettinger</h1></a>
+        <div class="video-box">
+        <a href="home.html">
+        <video autoplay muted loop playsinline>
+            <source src="assets/webm/landing.webm" type="video/webm">
+        </video>
+        </a>
+        </div>
+        <a class="enter-link" href="home.html">Enter</a>
+        <a href="home.html"><img class="landing-logo" src="assets/img/logo.webp" alt="Jordan Ettinger"></a>
+    </div>
+</body>
+</html>
