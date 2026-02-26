@@ -121,9 +121,10 @@
     <script>
         var video = document.getElementById('landing-video');
         video.muted = true;
+        video.load();
         video.play().catch(function() {
-            // Autoplay blocked — attempt on first user interaction
             document.addEventListener('touchstart', function handler() {
+                video.load();
                 video.play();
                 document.removeEventListener('touchstart', handler);
             }, { once: true });
