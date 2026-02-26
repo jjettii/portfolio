@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', function() {
             item.addEventListener('mouseleave', function() {
                 if (!touchStarted) {
                     video.pause();
-                    video.currentTime = 0; // Reset to beginning
+                    video.currentTime = 0;
                     item.classList.remove('playing');
                 }
             });
@@ -74,23 +74,25 @@ document.addEventListener('DOMContentLoaded', function() {
             item.addEventListener('click', function(e) {
                 e.preventDefault();
 
-                // If video is not playing, this is mobile/touch - play it
                 if (!item.classList.contains('playing')) {
                     // Pause and reset any currently playing video
                     if (currentlyPlaying && currentlyPlaying !== item) {
                         const prevVideo = currentlyPlaying.querySelector('.video-preview');
                         prevVideo.pause();
+                        prevVideo.currentTime = 0;
                         currentlyPlaying.classList.remove('playing');
                     }
 
-                    // Play this video
+                    // load() forces Safari to re-evaluate sources and bind
+                    // the play action to the user gesture synchronously
+                    video.load();
                     video.play().catch(err => {
                         console.log('Video play failed:', err);
                     });
                     item.classList.add('playing');
                     currentlyPlaying = item;
                 } else {
-                    // Video is playing - navigate to individual project page
+                    // Video is playing — navigate to project page
                     const targetPage = projectPages[videoId];
                     if (targetPage) {
                         window.location.href = targetPage;

@@ -4,7 +4,8 @@
       "Bash(xargs sed:*)",
       "Bash(identify:*)",
       "Bash(python3:*)",
-      "Bash(echo === Checking for old font references ===:*)"
+      "Bash(echo === Checking for old font references ===:*)",
+      "Bash(git add:*)"
     ]
   }
 }
