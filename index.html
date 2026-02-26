@@ -44,6 +44,7 @@
         .video-box {
             border: 1px solid #000;
             padding: 20px;
+            cursor: pointer;
         }
 
         video {
@@ -107,16 +108,26 @@
 <body>
     <div class="landing-wrap">
         <a href="home.html" style="text-decoration:none;color:inherit;"><h1 class="landing-title">Jordan Ettinger</h1></a>
-        <div class="video-box">
-        <a href="home.html">
-        <video autoplay muted loop playsinline>
-            <source src="assets/webm/landing.webm" type="video/webm">
-            <source src="assets/mp4/landing.mp4" type="video/mp4">
-        </video>
-        </a>
+        <div class="video-box" onclick="window.location.href='home.html'">
+            <video id="landing-video" muted loop playsinline>
+                <source src="assets/webm/landing.webm" type="video/webm">
+                <source src="assets/mp4/landing.mp4" type="video/mp4">
+            </video>
         </div>
         <a class="enter-link" href="home.html">Enter</a>
         <a href="home.html"><img class="landing-logo" src="assets/img/logo.webp" alt="Jordan Ettinger"></a>
     </div>
+
+    <script>
+        var video = document.getElementById('landing-video');
+        video.muted = true;
+        video.play().catch(function() {
+            // Autoplay blocked — attempt on first user interaction
+            document.addEventListener('touchstart', function handler() {
+                video.play();
+                document.removeEventListener('touchstart', handler);
+            }, { once: true });
+        });
+    </script>
 </body>
 </html>
