@@ -109,9 +109,9 @@
     <div class="landing-wrap">
         <a href="home.html" style="text-decoration:none;color:inherit;"><h1 class="landing-title">Jordan Ettinger</h1></a>
         <div class="video-box" onclick="window.location.href='home.html'">
-            <video id="landing-video" muted loop playsinline>
-                <source src="assets/webm/landing.webm" type="video/webm">
+            <video id="landing-video" muted loop playsinline webkit-playsinline>
                 <source src="assets/mp4/landing.mp4" type="video/mp4">
+                <source src="assets/webm/landing.webm" type="video/webm">
             </video>
         </div>
         <a class="enter-link" href="home.html">Enter</a>
@@ -121,14 +121,17 @@
     <script>
         var video = document.getElementById('landing-video');
         video.muted = true;
+
+        function tryPlay() {
+            var promise = video.play();
+            if (promise !== undefined) {
+                promise.catch(function() {});
+            }
+        }
+
+        video.addEventListener('canplaythrough', tryPlay, { once: true });
         video.load();
-        video.play().catch(function() {
-            document.addEventListener('touchstart', function handler() {
-                video.load();
-                video.play();
-                document.removeEventListener('touchstart', handler);
-            }, { once: true });
-        });
+        tryPlay();
     </script>
 </body>
 </html>
