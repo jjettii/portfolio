@@ -62,22 +62,6 @@
             aspect-ratio: 16 / 9;
         }
 
-        .landing-poster {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            right: 20px;
-            bottom: 20px;
-            width: calc(100% - 40px);
-            height: calc(100% - 40px);
-            object-fit: cover;
-            pointer-events: none;
-        }
-
-        .landing-poster.hidden {
-            display: none;
-        }
-
         .enter-link {
             font-family: 'AkzidenzGrotesk', sans-serif;
             font-weight: 300;
@@ -136,7 +120,6 @@
                 <source src="assets/mp4/landing.mp4" type="video/mp4">
                 <source src="assets/webm/landing.webm" type="video/webm">
             </video>
-            <img id="landing-poster" class="landing-poster" src="assets/img/san-poncho.webp" alt="">
         </div>
         <a class="enter-link" href="home.html">Enter</a>
         <a href="home.html"><img class="landing-logo" src="assets/img/logo.webp" alt="Jordan Ettinger"></a>
@@ -144,14 +127,11 @@
 
     <script>
         var video = document.getElementById('landing-video');
-        var poster = document.getElementById('landing-poster');
 
         video.muted = true;
 
         function startVideo() {
-            video.play().then(function() {
-                poster.classList.add('hidden');
-            }).catch(function() {});
+            video.play().catch(function() {});
         }
 
         // Try immediately (works on desktop and when autoplay is allowed)
