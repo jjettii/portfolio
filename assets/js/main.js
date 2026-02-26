@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'sheringham': 'projects/sheringham.html',
             'whistlebuoy': 'projects/whistlebuoy.html',
             'anian': 'projects/anian.html',
-            'therun': 'projects/therun.html',
+            'therun': 'projects/the-run.html',
             'villamar': 'projects/villamar.html',
             'somedays': 'projects/somedays.html',
             'too-much': 'projects/too-much.html',
