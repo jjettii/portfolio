@@ -48,22 +48,6 @@ document.addEventListener('DOMContentLoaded', function() {
             'bear-cub': 'projects/bear-cub.html'
         };
 
-        // Preload videos as they approach the viewport
-        const preloadObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const video = entry.target.querySelector('.video-preview');
-                    if (video && video.preload === 'none') {
-                        video.preload = 'auto';
-                        video.load();
-                    }
-                    preloadObserver.unobserve(entry.target);
-                }
-            });
-        }, { rootMargin: '200px' });
-
-        videoItems.forEach(item => preloadObserver.observe(item));
-
         videoItems.forEach(item => {
             const video = item.querySelector('.video-preview');
             const videoId = item.dataset.videoId;
