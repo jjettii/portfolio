@@ -68,7 +68,7 @@ function zipEndRecord(count, cdSize, cdOffset) {
 }
 
 async function streamZipDownload(env, files, zipName) {
-  const { readable, writable } = new TransformStream();
+  const { readable, writable } = new IdentityTransformStream();
   const writer = writable.getWriter();
   const enc = new TextEncoder();
   const now = new Date();
@@ -88,7 +88,7 @@ async function streamZipDownload(env, files, zipName) {
         offset += header.length;
 
         const obj = await env.BUCKET.get(f.r2_key);
-        let crc = 0xFFFFFFFF;
+        const crc = (f.crc32 >>> 0) || 0;  // pre-computed at upload time
         let size = 0;
 
         if (obj) {
@@ -96,15 +96,11 @@ async function streamZipDownload(env, files, zipName) {
           for (;;) {
             const { done, value } = await reader.read();
             if (done) break;
-            for (let i = 0; i < value.length; i++) {
-              crc = (crc >>> 8) ^ CRC_TABLE[(crc ^ value[i]) & 0xFF];
-            }
             size += value.length;
             await writer.write(value);
             offset += value.length;
           }
         }
-        crc = (crc ^ 0xFFFFFFFF) >>> 0;
 
         const desc = zipDataDescriptor(crc, size);
         await writer.write(desc);
@@ -123,8 +119,8 @@ async function streamZipDownload(env, files, zipName) {
       await writer.write(zipEndRecord(central.length, offset - cdOffset, cdOffset));
       await writer.close();
     } catch (err) {
-      console.error('ZIP stream error:', err);
-      await writer.abort(err);
+      console.error('ZIP stream error:', err.message ?? err);
+      try { await writer.abort(err); } catch {}
     }
   })();
 
@@ -146,8 +142,8 @@ const CORS = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
-const UPLOAD_EXPIRY = 7200;   // 2 hours for upload window
-const DOWNLOAD_EXPIRY = 3600; // 1 hour for download links
+const UPLOAD_EXPIRY = 7200;      // 2 hours for upload window
+const DOWNLOAD_EXPIRY = 2592000; // 30 days for download links
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -177,7 +173,7 @@ async function hashPassword(password, env) {
     .join('');
 }
 
-async function getPresignedUrl(env, r2Key, method, expireSeconds) {
+async function getPresignedUrl(env, r2Key, method, expireSeconds, disposition) {
   const client = new AwsClient({
     accessKeyId: env.R2_ACCESS_KEY_ID,
     secretAccessKey: env.R2_SECRET_ACCESS_KEY,
@@ -189,6 +185,7 @@ async function getPresignedUrl(env, r2Key, method, expireSeconds) {
     `https://${env.CF_ACCOUNT_ID}.r2.cloudflarestorage.com/${env.R2_BUCKET_NAME}/${r2Key}`
   );
   url.searchParams.set('X-Amz-Expires', String(expireSeconds));
+  if (disposition) url.searchParams.set('response-content-disposition', disposition);
 
   const signed = await client.sign(new Request(url.toString(), { method }), {
     aws: { signQuery: true, allHeaders: true },
@@ -224,6 +221,28 @@ async function handleTransferCreate(request, env) {
 }
 
 async function handleTransferInfo(request, env, id) {
+  if (isAdmin(request, env)) {
+    const row = await env.DB.prepare(
+      `SELECT id, filename, filesize, total_size, description, created_at FROM transfers WHERE id = ?`
+    ).bind(id).first();
+    if (!row) return json({ error: 'Transfer not found' }, 404);
+
+    const { results: files } = await env.DB.prepare(
+      `SELECT COUNT(*) AS cnt FROM transfer_files WHERE transfer_id = ?`
+    ).bind(id).all();
+    const fileCount = files[0]?.cnt || 0;
+    const isMulti = fileCount > 0;
+    return json({
+      id: row.id,
+      filename: row.filename,
+      filesize: isMulti ? row.total_size : row.filesize,
+      description: row.description,
+      created_at: row.created_at,
+      is_multi: isMulti,
+      file_count: isMulti ? fileCount : null,
+    });
+  }
+
   const url = new URL(request.url);
   const password = url.searchParams.get('password') || '';
 
@@ -268,14 +287,14 @@ async function handleTransferDownload(request, env, id) {
   if (hash !== row.password_hash) return json({ error: 'Invalid password' }, 403);
 
   const { results: files } = await env.DB.prepare(
-    `SELECT filename, r2_key FROM transfer_files WHERE transfer_id = ? ORDER BY sort_order ASC`
+    `SELECT filename, r2_key, crc32 FROM transfer_files WHERE transfer_id = ? ORDER BY sort_order ASC`
   ).bind(id).all();
 
   if (files.length > 0) {
     return streamZipDownload(env, files, row.filename);
   }
 
-  const downloadUrl = await getPresignedUrl(env, row.r2_key, 'GET', DOWNLOAD_EXPIRY);
+  const downloadUrl = await getPresignedUrl(env, row.r2_key, 'GET', DOWNLOAD_EXPIRY, `attachment; filename="${row.filename}"`);
   return json({ downloadUrl, filename: row.filename });
 }
 
@@ -313,6 +332,107 @@ async function handleTransferDelete(request, env, id) {
   await env.DB.prepare(`DELETE FROM transfers WHERE id = ?`).bind(id).run();
 
   return json({ ok: true });
+}
+
+async function handleTransferUpdate(request, env, id) {
+  const denied = requireAdmin(request, env);
+  if (denied) return denied;
+
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
+
+  const row = await env.DB.prepare(`SELECT id FROM transfers WHERE id = ?`).bind(id).first();
+  if (!row) return json({ error: 'Transfer not found' }, 404);
+
+  const updates = [];
+  const values = [];
+
+  if (body.filename !== undefined) { updates.push('filename = ?'); values.push(body.filename); }
+  if (body.password) { updates.push('password_hash = ?'); values.push(await hashPassword(body.password, env)); }
+
+  if (!updates.length) return json({ error: 'Nothing to update' }, 400);
+
+  values.push(id);
+  await env.DB.prepare(`UPDATE transfers SET ${updates.join(', ')} WHERE id = ?`).bind(...values).run();
+
+  return json({ ok: true });
+}
+
+async function handleTransferFileDelete(request, env, id) {
+  const denied = requireAdmin(request, env);
+  if (denied) return denied;
+
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
+
+  const { filename } = body;
+  if (!filename) return json({ error: 'filename required' }, 400);
+
+  const file = await env.DB.prepare(
+    `SELECT r2_key, filesize FROM transfer_files WHERE transfer_id = ? AND filename = ?`
+  ).bind(id, filename).first();
+  if (!file) return json({ error: 'File not found' }, 404);
+
+  if (file.r2_key) await env.BUCKET.delete(file.r2_key);
+  await env.DB.prepare(`DELETE FROM transfer_files WHERE transfer_id = ? AND filename = ?`).bind(id, filename).run();
+
+  if (file.filesize) {
+    await env.DB.prepare(
+      `UPDATE transfers SET total_size = MAX(0, COALESCE(total_size, 0) - ?) WHERE id = ?`
+    ).bind(file.filesize, id).run();
+  }
+
+  return json({ ok: true });
+}
+
+async function handleTransferFileCrc(request, env, id) {
+  const denied = requireAdmin(request, env);
+  if (denied) return denied;
+
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
+
+  const { filename, crc32 } = body;
+  if (!filename || crc32 == null) return json({ error: 'filename and crc32 required' }, 400);
+
+  await env.DB.prepare(
+    `UPDATE transfer_files SET crc32 = ? WHERE transfer_id = ? AND filename = ?`
+  ).bind(crc32 >>> 0, id, filename).run();
+
+  return json({ ok: true });
+}
+
+async function handleTransferFileList(request, env, id) {
+  if (!isAdmin(request, env)) {
+    const url = new URL(request.url);
+    const password = url.searchParams.get('password') || '';
+
+    const row = await env.DB.prepare(
+      `SELECT password_hash FROM transfers WHERE id = ?`
+    ).bind(id).first();
+    if (!row) return json({ error: 'Transfer not found' }, 404);
+
+    const hash = await hashPassword(password, env);
+    if (hash !== row.password_hash) return json({ error: 'Invalid password' }, 403);
+  } else {
+    const row = await env.DB.prepare(`SELECT id FROM transfers WHERE id = ?`).bind(id).first();
+    if (!row) return json({ error: 'Transfer not found' }, 404);
+  }
+
+  const { results: files } = await env.DB.prepare(
+    `SELECT filename, filesize, r2_key FROM transfer_files WHERE transfer_id = ? ORDER BY sort_order ASC`
+  ).bind(id).all();
+
+  const result = await Promise.all(files.map(async f => {
+    const leafName = f.filename.split('/').pop();
+    const downloadUrl = await getPresignedUrl(
+      env, f.r2_key, 'GET', DOWNLOAD_EXPIRY,
+      `attachment; filename="${leafName}"`
+    );
+    return { filename: f.filename, filesize: f.filesize, url: downloadUrl };
+  }));
+
+  return json({ files: result });
 }
 
 async function handleTransferCreateMulti(request, env) {
@@ -662,12 +782,28 @@ export default {
             ? handleTransferDownload(request, env, id)
             : handleTransferInfo(request, env, id);
         }
+        if (method === 'PATCH') return handleTransferUpdate(request, env, id);
         if (method === 'DELETE') return handleTransferDelete(request, env, id);
       }
 
       const xferFileMatch = pathname.match(/^\/api\/transfer\/([^/]+)\/add-file$/);
       if (xferFileMatch && method === 'POST') {
         return handleTransferAddFile(request, env, xferFileMatch[1]);
+      }
+
+      const xferSingleFileDeleteMatch = pathname.match(/^\/api\/transfer\/([^/]+)\/file$/);
+      if (xferSingleFileDeleteMatch && method === 'DELETE') {
+        return handleTransferFileDelete(request, env, xferSingleFileDeleteMatch[1]);
+      }
+
+      const xferCrcMatch = pathname.match(/^\/api\/transfer\/([^/]+)\/file-crc$/);
+      if (xferCrcMatch && method === 'PATCH') {
+        return handleTransferFileCrc(request, env, xferCrcMatch[1]);
+      }
+
+      const xferFilesListMatch = pathname.match(/^\/api\/transfer\/([^/]+)\/files$/);
+      if (xferFilesListMatch && method === 'GET') {
+        return handleTransferFileList(request, env, xferFilesListMatch[1]);
       }
 
       // ── Reviews ──

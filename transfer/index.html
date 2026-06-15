@@ -302,8 +302,17 @@
         <div class="ft-card-meta" id="dlDate"></div>
         <div class="ft-card-desc" id="dlDesc"></div>
       </div>
-      <button class="ft-btn" id="dlBtn" onclick="downloadFile()">Download</button>
-      <p class="ft-notice">Download link expires in 1 hour.</p>
+
+      <!-- Single file -->
+      <div id="dlSingle" style="display:none">
+        <button class="ft-btn" id="dlBtn" onclick="downloadFile()">Download</button>
+      </div>
+
+      <!-- Multi-file -->
+      <div id="dlMulti" style="display:none">
+        <div class="ft-list" id="dlFileList"></div>
+        <button class="ft-btn" id="dlAllBtn" onclick="downloadAll()" style="margin-top:20px">Download All</button>
+      </div>
     </div>
 
     <hr class="ft-divider">
@@ -334,78 +343,141 @@
 
     <!-- Admin dashboard (shown after auth) -->
     <div id="adminDash" style="display:none">
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:40px">
-        <div>
+
+      <!-- ── List view ──────────────────────────────────────────────────────── -->
+      <div id="adminViewList">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:40px">
           <h1 class="ft-heading" style="margin-bottom:0">Transfers</h1>
+          <button class="ft-btn" style="width:auto;padding:10px 20px"
+                  onclick="showNewTransfer()">+ New Transfer</button>
         </div>
-        <button class="ft-btn" style="width:auto;padding:10px 20px"
-                onclick="showUploadForm()">+ New Transfer</button>
+        <div class="ft-list" id="transferList">
+          <p class="ft-notice" id="listNotice">Loading transfers…</p>
+        </div>
+        <div style="margin-top:40px;text-align:center">
+          <a href="#" style="font-size:12px;font-weight:300;color:#aaa;text-decoration:none"
+             onclick="adminLogout(event)">Sign out</a>
+        </div>
       </div>
 
-      <!-- Upload form -->
-      <div id="uploadForm" style="display:none; margin-bottom:48px">
-        <h2 style="font-size:16px;font-weight:400;margin-bottom:24px;border-bottom:1px solid #e0e0e0;padding-bottom:12px">
-          New Transfer</h2>
+      <!-- ── New transfer view ──────────────────────────────────────────────── -->
+      <div id="adminViewNew" style="display:none">
+        <div style="margin-bottom:32px">
+          <a href="#" style="font-size:12px;font-weight:300;color:#aaa;text-decoration:none;letter-spacing:0.5px"
+             onclick="showListView(event)">← Back to transfers</a>
+        </div>
 
-        <input type="file" id="fileInput" onchange="onFileChosen(this)">
-        <div class="ft-dropzone" id="dropzone"
-             onclick="document.getElementById('fileInput').click()"
-             ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
-          <div class="ft-dropzone-icon">↑</div>
-          <div class="ft-dropzone-label">
-            <strong>Click to choose a file</strong><br>or drag &amp; drop files or a folder
+        <div id="uploadForm">
+          <h1 class="ft-heading">New Transfer</h1>
+
+          <input type="file" id="fileInput" onchange="onFileChosen(this)">
+          <div class="ft-dropzone" id="dropzone"
+               onclick="document.getElementById('fileInput').click()"
+               ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+            <div class="ft-dropzone-icon">↑</div>
+            <div class="ft-dropzone-label">
+              <strong>Click to choose a file</strong><br>or drag &amp; drop files or a folder
+            </div>
+            <div class="ft-dropzone-filename" id="chosenFile"></div>
           </div>
-          <div class="ft-dropzone-filename" id="chosenFile"></div>
-        </div>
 
-        <div class="ft-field">
-          <label class="ft-label" for="upDesc">Transfer Name</label>
-          <input class="ft-input" type="text" id="upDesc" placeholder="e.g. Rough cut v2 for review">
-        </div>
-        <div class="ft-field">
-          <label class="ft-label" for="upPass">Download Password</label>
-          <input class="ft-input" type="text" id="upPass" placeholder="Password you'll share with the client"
-                 autocomplete="off" spellcheck="false">
-        </div>
-
-        <div class="ft-progress" id="uploadProgress">
-          <div class="ft-progress-bar-wrap">
-            <div class="ft-progress-bar" id="uploadBar"></div>
+          <div class="ft-field">
+            <label class="ft-label" for="upDesc">Transfer Name</label>
+            <input class="ft-input" type="text" id="upDesc" placeholder="e.g. Rough cut v2 for review">
           </div>
-          <div class="ft-progress-label" id="uploadLabel">Uploading…</div>
+          <div class="ft-field">
+            <label class="ft-label" for="upPass">Download Password</label>
+            <input class="ft-input" type="text" id="upPass" placeholder="Password you'll share with the client"
+                   autocomplete="off" spellcheck="false">
+          </div>
+
+          <div class="ft-progress" id="uploadProgress">
+            <div class="ft-progress-bar-wrap"><div class="ft-progress-bar" id="uploadBar"></div></div>
+            <div class="ft-progress-label" id="uploadLabel">Uploading…</div>
+          </div>
+
+          <button class="ft-btn" id="uploadBtn" onclick="doUpload()">Upload</button>
+          <div class="ft-error" id="uploadError" style="display:none;margin-top:12px"></div>
         </div>
 
-        <div style="display:flex; gap:12px">
-          <button class="ft-btn" style="flex:1" id="uploadBtn" onclick="doUpload()">Upload</button>
-          <button class="ft-btn ft-btn-ghost" style="flex:none;width:auto;padding:12px 20px"
-                  onclick="hideUploadForm()">Cancel</button>
+        <div id="shareResult" style="display:none">
+          <h2 style="font-size:16px;font-weight:400;margin-bottom:16px">Transfer Ready</h2>
+          <div class="ft-share">
+            <div class="ft-share-label">Share this link</div>
+            <div class="ft-share-row">
+              <input class="ft-share-url" type="text" id="shareUrl" readonly>
+              <button class="ft-copy-btn" onclick="copyShareUrl()">Copy</button>
+            </div>
+          </div>
+          <button class="ft-btn ft-btn-ghost" style="width:auto;padding:10px 20px"
+                  onclick="showListView(event)">Done</button>
         </div>
-        <div class="ft-error" id="uploadError" style="display:none; margin-top:12px"></div>
       </div>
 
-      <!-- Share result -->
-      <div id="shareResult" style="display:none; margin-bottom:48px">
-        <h2 style="font-size:16px;font-weight:400;margin-bottom:16px">Transfer Ready</h2>
-        <div class="ft-share">
-          <div class="ft-share-label">Share this link</div>
+      <!-- ── Detail view ────────────────────────────────────────────────────── -->
+      <div id="adminViewDetail" style="display:none">
+        <div style="margin-bottom:32px">
+          <a href="#" style="font-size:12px;font-weight:300;color:#aaa;text-decoration:none;letter-spacing:0.5px"
+             onclick="showListView(event)">← Back to transfers</a>
+        </div>
+
+        <div class="ft-field" style="margin-bottom:32px">
+          <label class="ft-label">Transfer Name</label>
+          <div style="display:flex;gap:8px">
+            <input class="ft-input" type="text" id="detailName" style="flex:1">
+            <button class="ft-copy-btn" onclick="saveDetailName()">Save</button>
+          </div>
+          <div class="ft-error" id="detailNameError" style="display:none;margin-top:6px"></div>
+          <div class="ft-notice" id="detailNameOk" style="display:none;margin-top:6px">Saved.</div>
+        </div>
+
+        <div class="ft-share" style="margin-bottom:32px">
+          <div class="ft-share-label">Share Link</div>
           <div class="ft-share-row">
-            <input class="ft-share-url" type="text" id="shareUrl" readonly>
-            <button class="ft-copy-btn" onclick="copyShareUrl()">Copy</button>
+            <input class="ft-share-url" type="text" id="detailShareUrl" readonly>
+            <button class="ft-copy-btn" onclick="copyDetailUrl()">Copy</button>
           </div>
         </div>
-        <button class="ft-btn ft-btn-ghost" style="width:auto;padding:10px 20px"
-                onclick="hideShareResult()">Done</button>
+
+        <div class="ft-field" style="margin-bottom:32px">
+          <label class="ft-label">Change Password</label>
+          <div style="display:flex;gap:8px">
+            <input class="ft-input" type="text" id="detailPass" placeholder="New password"
+                   style="flex:1" autocomplete="off">
+            <button class="ft-copy-btn" onclick="saveDetailPass()">Save</button>
+          </div>
+          <div class="ft-error" id="detailPassError" style="display:none;margin-top:6px"></div>
+          <div class="ft-notice" id="detailPassOk" style="display:none;margin-top:6px">Password updated.</div>
+        </div>
+
+        <div id="detailFilesSection" style="display:none;margin-bottom:32px">
+          <div class="ft-label" style="margin-bottom:12px">Files</div>
+          <div class="ft-list" id="detailFileList"></div>
+
+          <div style="margin-top:24px;border-top:1px solid #e0e0e0;padding-top:24px">
+            <div class="ft-label" style="margin-bottom:12px">Add More Files</div>
+            <input type="file" id="detailFileInput" onchange="onDetailFileChosen(this)" multiple>
+            <div class="ft-dropzone" id="detailDropzone"
+                 onclick="document.getElementById('detailFileInput').click()"
+                 ondragover="onDetailDragOver(event)" ondragleave="onDetailDragLeave(event)" ondrop="onDetailDrop(event)">
+              <div class="ft-dropzone-icon">↑</div>
+              <div class="ft-dropzone-label"><strong>Click to choose files</strong><br>or drag &amp; drop</div>
+              <div class="ft-dropzone-filename" id="detailChosenFiles"></div>
+            </div>
+            <div class="ft-progress" id="detailProgress">
+              <div class="ft-progress-bar-wrap"><div class="ft-progress-bar" id="detailBar"></div></div>
+              <div class="ft-progress-label" id="detailLabel"></div>
+            </div>
+            <button class="ft-btn" id="detailAddBtn" onclick="doAddFiles()">Add Files</button>
+            <div class="ft-error" id="detailAddError" style="display:none;margin-top:8px"></div>
+          </div>
+        </div>
+
+        <div style="padding-top:24px;border-top:1px solid #e0e0e0">
+          <button class="ft-btn" style="background:#c00" onclick="deleteCurrentTransfer()">Delete Transfer</button>
+        </div>
       </div>
 
-      <!-- Transfer list -->
-      <div class="ft-list" id="transferList">
-        <p class="ft-notice" id="listNotice">Loading transfers…</p>
-      </div>
-
-      <div style="margin-top:40px; text-align:center">
-        <a href="#" style="font-size:12px;font-weight:300;color:#aaa;text-decoration:none"
-           onclick="adminLogout(event)">Sign out</a>
-      </div>
     </div>
   </div>
 
@@ -420,8 +492,12 @@ let adminToken = null;
 let currentTransferId = null;
 let currentPassword = null;
 let currentIsMulti = false;
-let chosenFiles = [];       // [{file: File, path: string}]
+let chosenFiles = [];
 let chosenFolderName = null;
+let fileList = [];
+let currentDetailId = null;
+let detailChosenFiles = [];
+let detailFileMap = [];
 
 // ─── Init ────────────────────────────────────────────────────────────────────
 (function init() {
@@ -474,10 +550,16 @@ async function lookupTransfer() {
     descEl.textContent = data.description || '';
     descEl.style.display = data.description ? 'block' : 'none';
 
-    document.getElementById('dlBtn').textContent = currentIsMulti ? 'Download ZIP' : 'Download';
     document.getElementById('dlForm').style.display = 'none';
     document.getElementById('dlInfo').style.display = 'block';
-
+    if (currentIsMulti) {
+      document.getElementById('dlSingle').style.display = 'none';
+      document.getElementById('dlMulti').style.display = 'block';
+      loadFileList(id, pass);
+    } else {
+      document.getElementById('dlSingle').style.display = 'block';
+      document.getElementById('dlMulti').style.display = 'none';
+    }
   } catch {
     showErr(errEl, 'Network error. Please try again.');
   } finally {
@@ -489,16 +571,9 @@ async function lookupTransfer() {
 async function downloadFile() {
   const btn = document.getElementById('dlBtn');
   btn.disabled = true;
-  btn.textContent = currentIsMulti ? 'Preparing ZIP…' : 'Generating link…';
+  btn.textContent = 'Generating link…';
 
   try {
-    if (currentIsMulti) {
-      // Worker streams the ZIP directly — open it as a navigation so the browser downloads it
-      const url = `${WORKER_URL}/api/transfer/${encodeURIComponent(currentTransferId)}/download?password=${encodeURIComponent(currentPassword)}`;
-      window.location.href = url;
-      return;
-    }
-
     const resp = await fetch(
       `${WORKER_URL}/api/transfer/${encodeURIComponent(currentTransferId)}/download?password=${encodeURIComponent(currentPassword)}`
     );
@@ -515,11 +590,66 @@ async function downloadFile() {
     alert('Network error. Please try again.');
   } finally {
     btn.disabled = false;
-    btn.textContent = currentIsMulti ? 'Download ZIP' : 'Download';
+    btn.textContent = 'Download';
   }
 }
 
-// ─── Admin flow ───────────────────────────────────────────────────────────────
+async function loadFileList(id, pass) {
+  const listEl = document.getElementById('dlFileList');
+  const allBtn = document.getElementById('dlAllBtn');
+  listEl.innerHTML = '<p class="ft-notice">Loading files…</p>';
+  allBtn.disabled = true;
+
+  try {
+    const resp = await fetch(
+      `${WORKER_URL}/api/transfer/${encodeURIComponent(id)}/files?password=${encodeURIComponent(pass)}`
+    );
+    const data = await resp.json();
+    if (!resp.ok) {
+      listEl.innerHTML = `<p class="ft-error">${esc(data.error || 'Failed to load files.')}</p>`;
+      return;
+    }
+
+    fileList = data.files || [];
+    if (!fileList.length) { listEl.innerHTML = '<p class="ft-notice">No files found.</p>'; return; }
+
+    listEl.innerHTML = fileList.map(f => `
+      <div class="ft-list-item">
+        <div class="ft-list-info">
+          <div class="ft-list-name">${esc(f.filename)}</div>
+          ${f.filesize ? `<div class="ft-list-meta">${formatBytes(f.filesize)}</div>` : ''}
+        </div>
+        <a href="${esc(f.url)}" download="${esc(f.filename.split('/').pop())}" class="ft-copy-btn" style="text-decoration:none">Download</a>
+      </div>
+    `).join('');
+
+    allBtn.disabled = false;
+  } catch {
+    listEl.innerHTML = '<p class="ft-error">Network error.</p>';
+  }
+}
+
+async function downloadAll() {
+  const btn = document.getElementById('dlAllBtn');
+  btn.disabled = true;
+  btn.textContent = 'Downloading…';
+
+  for (let i = 0; i < fileList.length; i++) {
+    const f = fileList[i];
+    const a = document.createElement('a');
+    a.href = f.url;
+    a.download = f.filename.split('/').pop();
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    if (i < fileList.length - 1) await new Promise(r => setTimeout(r, 400));
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Download All';
+}
+
+// ─── Admin auth ───────────────────────────────────────────────────────────────
 function toggleAdmin(e) {
   e.preventDefault();
   document.getElementById('sectionDownload').classList.toggle('active');
@@ -548,11 +678,13 @@ async function adminLogin() {
 function adminLogout(e) {
   e.preventDefault();
   adminToken = null;
+  currentDetailId = null;
   document.getElementById('adminAuth').style.display = 'block';
   document.getElementById('adminDash').style.display = 'none';
   document.getElementById('adminPass').value = '';
   document.getElementById('sectionAdmin').classList.remove('active');
   document.getElementById('sectionDownload').classList.add('active');
+  showAdminSubView('adminViewList');
 }
 
 async function refreshList() {
@@ -564,15 +696,10 @@ async function refreshList() {
 
 function renderTransferList(items) {
   const el = document.getElementById('transferList');
-  const notice = document.getElementById('listNotice');
   if (!items.length) {
-    notice.style.display = 'block';
-    notice.textContent = 'No transfers yet.';
-    el.innerHTML = '';
-    el.appendChild(notice);
+    el.innerHTML = '<p class="ft-notice">No transfers yet.</p>';
     return;
   }
-  notice.style.display = 'none';
   el.innerHTML = items.map(t => {
     const isMulti = t.file_count > 0;
     let meta = '';
@@ -584,36 +711,272 @@ function renderTransferList(items) {
     }
     if (meta) meta += ' · ';
     meta += new Date(t.created_at).toLocaleDateString('en-CA');
-    if (t.description) meta += ' · ' + esc(t.description);
     return `
-    <div class="ft-list-item">
+    <div class="ft-list-item" style="cursor:pointer" onclick="showDetailView('${esc(t.id)}')">
       <div class="ft-list-info">
         <div class="ft-list-name">${esc(t.filename)}</div>
         <div class="ft-list-meta">${meta}</div>
       </div>
-      <button class="ft-delete-btn" onclick="deleteTransfer('${esc(t.id)}')">Delete</button>
+      <span style="font-size:18px;color:#ccc;flex-shrink:0">›</span>
     </div>`;
   }).join('');
 }
 
-async function deleteTransfer(id) {
-  if (!confirm('Delete this transfer? All files will be permanently removed.')) return;
+// ─── Admin navigation ─────────────────────────────────────────────────────────
+function showAdminSubView(view) {
+  ['adminViewList', 'adminViewNew', 'adminViewDetail'].forEach(id => {
+    document.getElementById(id).style.display = id === view ? 'block' : 'none';
+  });
+}
+
+function showListView(e) {
+  if (e) e.preventDefault();
+  resetUploadForm();
+  showAdminSubView('adminViewList');
+  refreshList();
+}
+
+function showNewTransfer() {
+  resetUploadForm();
+  showAdminSubView('adminViewNew');
+}
+
+async function showDetailView(id) {
+  currentDetailId = id;
+  showAdminSubView('adminViewDetail');
+  await loadDetailView(id);
+}
+
+// ─── Detail view ──────────────────────────────────────────────────────────────
+async function loadDetailView(id) {
+  document.getElementById('detailNameError').style.display = 'none';
+  document.getElementById('detailNameOk').style.display = 'none';
+  document.getElementById('detailPassError').style.display = 'none';
+  document.getElementById('detailPassOk').style.display = 'none';
+  document.getElementById('detailFilesSection').style.display = 'none';
+  document.getElementById('detailPass').value = '';
+  detailChosenFiles = [];
+  document.getElementById('detailChosenFiles').textContent = '';
+  document.getElementById('detailFileInput').value = '';
+
   const resp = await fetch(`${WORKER_URL}/api/transfer/${encodeURIComponent(id)}`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  if (!resp.ok) return;
+  const data = await resp.json();
+
+  document.getElementById('detailName').value = data.filename || '';
+  document.getElementById('detailShareUrl').value = `${location.origin}/transfer/?id=${id}`;
+
+  if (data.is_multi) {
+    document.getElementById('detailFilesSection').style.display = 'block';
+    document.getElementById('detailFileList').innerHTML = '<p class="ft-notice">Loading…</p>';
+    loadDetailFiles(id);
+  }
+}
+
+async function loadDetailFiles(id) {
+  const listEl = document.getElementById('detailFileList');
+  listEl.innerHTML = '<p class="ft-notice">Loading…</p>';
+
+  const resp = await fetch(`${WORKER_URL}/api/transfer/${encodeURIComponent(id)}/files`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  if (!resp.ok) { listEl.innerHTML = '<p class="ft-error">Failed to load files.</p>'; return; }
+
+  const data = await resp.json();
+  detailFileMap = data.files || [];
+  renderDetailFiles();
+}
+
+function renderDetailFiles() {
+  const listEl = document.getElementById('detailFileList');
+  if (!detailFileMap.length) { listEl.innerHTML = '<p class="ft-notice">No files.</p>'; return; }
+  listEl.innerHTML = detailFileMap.map((f, i) => `
+    <div class="ft-list-item">
+      <div class="ft-list-info">
+        <div class="ft-list-name">${esc(f.filename)}</div>
+        ${f.filesize ? `<div class="ft-list-meta">${formatBytes(f.filesize)}</div>` : ''}
+      </div>
+      <button class="ft-delete-btn" onclick="deleteFileByIndex(${i})">Remove</button>
+    </div>
+  `).join('');
+}
+
+async function deleteFileByIndex(i) {
+  const f = detailFileMap[i];
+  if (!f || !confirm(`Remove "${f.filename}" from this transfer?`)) return;
+
+  const resp = await fetch(`${WORKER_URL}/api/transfer/${encodeURIComponent(currentDetailId)}/file`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+    body: JSON.stringify({ filename: f.filename }),
+  });
+  if (resp.ok) {
+    await loadDetailFiles(currentDetailId);
+    refreshList();
+  } else {
+    alert('Remove failed.');
+  }
+}
+
+async function saveDetailName() {
+  const name = document.getElementById('detailName').value.trim();
+  const errEl = document.getElementById('detailNameError');
+  const okEl = document.getElementById('detailNameOk');
+  errEl.style.display = 'none';
+  okEl.style.display = 'none';
+
+  if (!name) { showErr(errEl, 'Name cannot be empty.'); return; }
+
+  const resp = await fetch(`${WORKER_URL}/api/transfer/${encodeURIComponent(currentDetailId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+    body: JSON.stringify({ filename: name }),
+  });
+  if (resp.ok) {
+    okEl.style.display = 'block';
+    setTimeout(() => { okEl.style.display = 'none'; }, 2000);
+    refreshList();
+  } else {
+    const d = await resp.json();
+    showErr(errEl, d.error || 'Save failed.');
+  }
+}
+
+function copyDetailUrl() {
+  const input = document.getElementById('detailShareUrl');
+  input.select();
+  navigator.clipboard.writeText(input.value).catch(() => document.execCommand('copy'));
+  const btn = event.target;
+  btn.textContent = 'Copied';
+  setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+}
+
+async function saveDetailPass() {
+  const pass = document.getElementById('detailPass').value.trim();
+  const errEl = document.getElementById('detailPassError');
+  const okEl = document.getElementById('detailPassOk');
+  errEl.style.display = 'none';
+  okEl.style.display = 'none';
+
+  if (!pass) { showErr(errEl, 'Enter a new password.'); return; }
+
+  const resp = await fetch(`${WORKER_URL}/api/transfer/${encodeURIComponent(currentDetailId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+    body: JSON.stringify({ password: pass }),
+  });
+  if (resp.ok) {
+    document.getElementById('detailPass').value = '';
+    okEl.style.display = 'block';
+    setTimeout(() => { okEl.style.display = 'none'; }, 2000);
+  } else {
+    const d = await resp.json();
+    showErr(errEl, d.error || 'Save failed.');
+  }
+}
+
+async function deleteCurrentTransfer() {
+  if (!confirm('Delete this transfer? All files will be permanently removed.')) return;
+  const resp = await fetch(`${WORKER_URL}/api/transfer/${encodeURIComponent(currentDetailId)}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${adminToken}` },
   });
-  if (resp.ok) refreshList();
-  else alert('Delete failed.');
+  if (resp.ok) {
+    currentDetailId = null;
+    showListView(null);
+  } else {
+    alert('Delete failed.');
+  }
+}
+
+// ─── Add files to existing transfer ──────────────────────────────────────────
+function onDetailFileChosen(input) {
+  if (!input.files.length) return;
+  detailChosenFiles = Array.from(input.files).map(f => ({ file: f, path: f.name }));
+  updateDetailDropzoneDisplay();
+}
+
+function updateDetailDropzoneDisplay() {
+  const el = document.getElementById('detailChosenFiles');
+  if (!detailChosenFiles.length) { el.textContent = ''; return; }
+  const totalSize = detailChosenFiles.reduce((s, f) => s + f.file.size, 0);
+  el.textContent = detailChosenFiles.length === 1
+    ? detailChosenFiles[0].file.name
+    : `${detailChosenFiles.length} files · ${formatBytes(totalSize)}`;
+}
+
+function onDetailDragOver(e) {
+  e.preventDefault();
+  document.getElementById('detailDropzone').classList.add('drag-over');
+}
+function onDetailDragLeave(e) {
+  e.preventDefault();
+  document.getElementById('detailDropzone').classList.remove('drag-over');
+}
+async function onDetailDrop(e) {
+  e.preventDefault();
+  document.getElementById('detailDropzone').classList.remove('drag-over');
+  const { files } = await collectFilesFromItems([...e.dataTransfer.items]);
+  detailChosenFiles = files;
+  updateDetailDropzoneDisplay();
+}
+
+async function doAddFiles() {
+  const errEl = document.getElementById('detailAddError');
+  const btn = document.getElementById('detailAddBtn');
+  const bar = document.getElementById('detailBar');
+  const label = document.getElementById('detailLabel');
+  const progress = document.getElementById('detailProgress');
+
+  errEl.style.display = 'none';
+  if (!detailChosenFiles.length) { showErr(errEl, 'Choose files first.'); return; }
+
+  btn.disabled = true;
+  progress.style.display = 'block';
+
+  try {
+    for (let i = 0; i < detailChosenFiles.length; i++) {
+      const { file, path } = detailChosenFiles[i];
+      label.textContent = `Uploading ${i + 1} of ${detailChosenFiles.length}: ${file.name}`;
+      bar.style.width = Math.round((i / detailChosenFiles.length) * 100) + '%';
+
+      const addResp = await fetch(`${WORKER_URL}/api/transfer/${encodeURIComponent(currentDetailId)}/add-file`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ filename: path, filesize: file.size }),
+      });
+
+      if (!addResp.ok) {
+        const d = await addResp.json();
+        throw new Error(d.error || `Failed to register: ${path}`);
+      }
+
+      const { uploadUrl } = await addResp.json();
+      await uploadWithProgress(uploadUrl, file, (pct) => {
+        bar.style.width = Math.round(((i + pct / 100) / detailChosenFiles.length) * 100) + '%';
+      });
+    }
+
+    bar.style.width = '100%';
+    label.textContent = 'Done.';
+    detailChosenFiles = [];
+    document.getElementById('detailChosenFiles').textContent = '';
+    document.getElementById('detailFileInput').value = '';
+    await loadDetailFiles(currentDetailId);
+    refreshList();
+    setTimeout(() => { progress.style.display = 'none'; }, 2000);
+  } catch (err) {
+    showErr(errEl, 'Upload failed: ' + err.message);
+    progress.style.display = 'none';
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // ─── Upload flow ──────────────────────────────────────────────────────────────
-function showUploadForm() {
-  document.getElementById('uploadForm').style.display = 'block';
-  document.getElementById('shareResult').style.display = 'none';
-}
-
-function hideUploadForm() {
-  document.getElementById('uploadForm').style.display = 'none';
+function resetUploadForm() {
   chosenFiles = [];
   chosenFolderName = null;
   document.getElementById('chosenFile').textContent = '';
@@ -623,9 +986,7 @@ function hideUploadForm() {
   document.getElementById('uploadProgress').style.display = 'none';
   document.getElementById('uploadBar').style.width = '0%';
   document.getElementById('uploadError').style.display = 'none';
-}
-
-function hideShareResult() {
+  document.getElementById('uploadForm').style.display = 'block';
   document.getElementById('shareResult').style.display = 'none';
 }
 
@@ -661,8 +1022,7 @@ function onDragLeave(e) {
 function onDrop(e) {
   e.preventDefault();
   document.getElementById('dropzone').classList.remove('drag-over');
-  const items = [...e.dataTransfer.items];
-  collectFilesFromItems(items).then(({ files, folderName }) => {
+  collectFilesFromItems([...e.dataTransfer.items]).then(({ files, folderName }) => {
     chosenFiles = files;
     chosenFolderName = folderName;
     updateDropzoneDisplay();
@@ -753,12 +1113,9 @@ async function doUpload() {
     if (!id) return;
 
     label.textContent = 'Upload complete.';
-    const shareUrl = `${location.origin}/transfer/?id=${id}`;
     document.getElementById('uploadForm').style.display = 'none';
     document.getElementById('shareResult').style.display = 'block';
-    hideUploadForm();
-    document.getElementById('shareResult').style.display = 'block';
-    document.getElementById('shareUrl').value = shareUrl;
+    document.getElementById('shareUrl').value = `${location.origin}/transfer/?id=${id}`;
 
     await refreshList();
   } catch (err) {
@@ -828,8 +1185,7 @@ async function doMultiUpload(pass, desc, bar, label) {
     const { uploadUrl } = await addResp.json();
 
     await uploadWithProgress(uploadUrl, file, (pct) => {
-      const overall = Math.round(((i + pct / 100) / chosenFiles.length) * 100);
-      bar.style.width = overall + '%';
+      bar.style.width = Math.round(((i + pct / 100) / chosenFiles.length) * 100) + '%';
     });
   }
 
