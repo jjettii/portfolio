@@ -480,9 +480,6 @@
   </div>
 </div>
 
-<!-- tus-js-client for resumable upload to Cloudflare Stream -->
-<script src="https://cdn.jsdelivr.net/npm/tus-js-client@latest/dist/tus.min.js"></script>
-
 <script>
 // ─── Config — update after `wrangler deploy` ─────────────────────────────────
 const WORKER_URL = 'https://portfolio-worker.jordanettinger.workers.dev';
@@ -730,14 +727,14 @@ async function doStreamUpload() {
   btn.textContent = 'Starting…';
 
   try {
-    // Step 1: Get TUS upload URL from Stream via Worker
+    // Step 1: Get a direct upload URL from Stream via Worker
     const resp = await fetch(`${WORKER_URL}/api/stream/upload`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${adminToken}`,
       },
-      body: JSON.stringify({ title, description, filesize: file.size }),
+      body: JSON.stringify({ title, description }),
     });
 
     if (!resp.ok) {
@@ -748,28 +745,31 @@ async function doStreamUpload() {
 
     const { uploadUrl } = await resp.json();
 
-    // Step 2: TUS upload to Stream
+    // Step 2: POST file directly to Stream's direct_upload URL (CORS-friendly, no TUS)
     const progressWrap = document.getElementById('modalProgress');
     const bar = document.getElementById('modalBar');
     const label = document.getElementById('modalLabel');
     progressWrap.style.display = 'block';
     btn.textContent = 'Uploading…';
 
+    const formData = new FormData();
+    formData.append('file', file);
+
     await new Promise((resolve, reject) => {
-      const upload = new tus.Upload(file, {
-        endpoint: uploadUrl,
-        uploadUrl: uploadUrl,
-        retryDelays: [0, 3000, 5000],
-        metadata: { filename: file.name, filetype: file.type },
-        onProgress(loaded, total) {
-          const pct = Math.round((loaded / total) * 100);
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', uploadUrl);
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 100);
           bar.style.width = pct + '%';
           label.textContent = `Uploading… ${pct}%`;
-        },
-        onSuccess() { resolve(); },
-        onError(err) { reject(err); },
-      });
-      upload.start();
+        }
+      };
+      xhr.onload = () => xhr.status >= 200 && xhr.status < 300
+        ? resolve()
+        : reject(new Error(`Upload returned HTTP ${xhr.status}`));
+      xhr.onerror = () => reject(new Error('Network error during upload'));
+      xhr.send(formData);
     });
 
     label.textContent = 'Upload complete — processing may take a few minutes.';

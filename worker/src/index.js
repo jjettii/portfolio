@@ -159,19 +159,23 @@ async function handleStreamUploadCreate(request, env) {
   let body;
   try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
 
-  const { title, description, filesize } = body;
-  if (!title || !filesize) return json({ error: 'title and filesize are required' }, 400);
+  const { title, description } = body;
+  if (!title) return json({ error: 'title is required' }, 400);
 
+  // direct_upload is the CORS-friendly endpoint designed for browser uploads
   const resp = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/stream?direct_user=true`,
+    `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/stream/direct_upload`,
     {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${env.STREAM_API_TOKEN}`,
-        'Tus-Resumable': '1.0.0',
-        'Upload-Length': String(filesize),
-        'Upload-Metadata': `name ${btoa(title)},requiresignedurls ${btoa('false')}`,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        maxDurationSeconds: 7200,
+        requireSignedURLs: false,
+        meta: { name: title },
+      }),
     }
   );
 
@@ -180,8 +184,9 @@ async function handleStreamUploadCreate(request, env) {
     return json({ error: 'Stream API error', detail: text }, 502);
   }
 
-  const uploadUrl = resp.headers.get('location');
-  const streamUid = resp.headers.get('stream-media-id');
+  const { result } = await resp.json();
+  const uploadUrl = result.uploadURL;
+  const streamUid = result.uid;
 
   // Register video in D1 so clients can list it without Stream API access
   await env.DB.prepare(
