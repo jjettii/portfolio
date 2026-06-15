@@ -1,0 +1,370 @@
+/* =============================================
+   home.css — Hero and page-specific styles
+   (base styles and nav styles live in style.css)
+   ============================================= */
+
+
+/* ─── Hero ───────────────────────────────────── */
+
+.home-hero {
+    position: relative;
+    height: 100vh;
+    overflow: hidden;
+    background: #000;
+}
+
+.home-hero-video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.75;
+}
+
+.home-hero-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 40px;
+    opacity: 0;
+    animation: heroFadeIn 1s ease 0.6s forwards;
+}
+
+@keyframes heroFadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: none; }
+}
+
+.home-hero-name {
+    font-family: 'AkzidenzGrotesk', sans-serif;
+    font-weight: 700;
+    font-size: clamp(36px, 5.5vw, 72px);
+    letter-spacing: -0.02em;
+    color: #fff;
+    line-height: 1.1;
+    margin-bottom: 20px;
+}
+
+.home-hero-tagline {
+    font-family: 'AkzidenzGrotesk', sans-serif;
+    font-weight: 300;
+    font-size: clamp(14px, 1.6vw, 20px);
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.85);
+    text-transform: uppercase;
+}
+
+.home-hero-scroll {
+    position: absolute;
+    bottom: 36px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    opacity: 0;
+    animation: heroFadeIn 1s ease 1.4s forwards;
+}
+
+.home-hero-scroll span {
+    font-size: 11px;
+    font-weight: 300;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.6);
+}
+
+.home-hero-scroll-line {
+    width: 1px;
+    height: 40px;
+    background: rgba(255,255,255,0.4);
+    animation: scrollPulse 2s ease-in-out 2s infinite;
+}
+
+@keyframes scrollPulse {
+    0%, 100% { opacity: 0.4; transform: scaleY(1); }
+    50%       { opacity: 1;   transform: scaleY(0.6); }
+}
+
+
+/* ─── Intro Text ─────────────────────────────── */
+
+.home-intro {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 110px 40px;
+    text-align: center;
+}
+
+.home-intro-tagline {
+    font-size: clamp(18px, 2.2vw, 26px);
+    font-weight: 300;
+    letter-spacing: 0.01em;
+    line-height: 1.4;
+    color: #000;
+    margin-bottom: 28px;
+}
+
+.home-intro-body {
+    font-size: 15px;
+    font-weight: 400;
+    color: #555;
+    line-height: 1.8;
+}
+
+
+/* ─── Section Label ──────────────────────────── */
+
+.home-section-label {
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #999;
+    padding: 0 4px 32px;
+}
+
+
+/* ─── Work Grid ──────────────────────────────── */
+
+.home-work {
+    padding: 0 48px;
+}
+
+.home-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px;
+}
+
+.home-video-item {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    cursor: pointer;
+    background: #000;
+}
+
+.home-video-poster,
+.home-video-preview {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.home-video-poster {
+    z-index: 2;
+    transition: opacity 0.6s ease;
+}
+
+.home-video-preview {
+    z-index: 1;
+}
+
+.home-video-item.playing .home-video-poster {
+    opacity: 0;
+}
+
+.home-video-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 28px 24px 24px;
+    background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 100%);
+    z-index: 3;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.home-video-item:hover .home-video-overlay,
+.home-video-item.playing .home-video-overlay {
+    opacity: 1;
+}
+
+.home-video-overlay h3 {
+    color: #fff;
+    font-size: 15px;
+    font-weight: 300;
+    letter-spacing: 0.02em;
+    margin: 0;
+}
+
+
+/* ─── CTA Strip ──────────────────────────────── */
+
+.home-cta {
+    padding: 110px 40px;
+    text-align: center;
+    border-top: 1px solid #e8e8e8;
+}
+
+.home-cta-text {
+    font-size: clamp(18px, 2.2vw, 26px);
+    font-weight: 300;
+    color: #000;
+    margin-bottom: 32px;
+    line-height: 1.4;
+}
+
+.home-cta-link {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #000;
+    text-decoration: none;
+    border-bottom: 1px solid #000;
+    padding-bottom: 3px;
+    transition: opacity 0.3s;
+}
+
+.home-cta-link:hover {
+    opacity: 0.4;
+}
+
+
+/* ─── Client Logos ───────────────────────────── */
+
+.home-logos {
+    padding: 60px 0;
+    border-top: 1px solid #e8e8e8;
+}
+
+.home-logo-scroll {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 50px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding: 0 40px;
+}
+
+.home-logo-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.home-logo-scroll img {
+    height: 80px;
+    width: auto;
+    flex-shrink: 0;
+    opacity: 0.7;
+    transition: opacity 0.3s;
+}
+
+.home-logo-scroll img:hover {
+    opacity: 1;
+}
+
+
+/* ─── Footer ─────────────────────────────────── */
+
+.home-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 48px;
+    border-top: 1px solid #000;
+    font-size: 12px;
+    font-weight: 300;
+    letter-spacing: 0.05em;
+}
+
+.home-footer-links {
+    list-style: none;
+    display: flex;
+    gap: 28px;
+}
+
+.home-footer-links a {
+    color: #000;
+    text-decoration: none;
+    transition: opacity 0.3s;
+}
+
+.home-footer-links a:hover {
+    opacity: 0.4;
+}
+
+
+/* ─── Fade-in animation ──────────────────────── */
+
+.fade-in {
+    opacity: 0;
+    transform: translateY(22px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.fade-in.visible {
+    opacity: 1;
+    transform: none;
+}
+
+.fade-in-delay-1 { transition-delay: 0.1s; }
+.fade-in-delay-2 { transition-delay: 0.2s; }
+.fade-in-delay-3 { transition-delay: 0.3s; }
+.fade-in-delay-4 { transition-delay: 0.4s; }
+.fade-in-delay-5 { transition-delay: 0.5s; }
+.fade-in-delay-6 { transition-delay: 0.6s; }
+
+
+/* ─── Responsive ─────────────────────────────── */
+
+@media (max-width: 768px) {
+    .home-hero-overlay {
+        padding: 0 28px;
+    }
+
+    .home-intro {
+        padding: 80px 28px;
+    }
+
+    .home-work {
+        padding: 0 24px;
+    }
+
+    .home-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .home-cta {
+        padding: 80px 28px;
+    }
+
+    .home-logo-scroll {
+        justify-content: flex-start;
+        gap: 30px;
+        padding: 0 28px;
+    }
+
+    .home-logo-scroll img {
+        height: 55px;
+    }
+
+    .home-footer {
+        flex-direction: column;
+        gap: 16px;
+        padding: 24px 28px;
+        text-align: center;
+    }
+
+    .home-footer-links {
+        gap: 20px;
+    }
+}

@@ -6,7 +6,14 @@
       "Bash(python3:*)",
       "Bash(echo === Checking for old font references ===:*)",
       "Bash(git add:*)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(wrangler --version)",
+      "Bash(wrangler whoami *)",
+      "Bash(wrangler r2 *)",
+      "Bash(wrangler d1 *)",
+      "Bash(wrangler secret *)",
+      "Bash(npm install *)",
+      "Bash(wrangler deploy *)"
     ]
   }
 }

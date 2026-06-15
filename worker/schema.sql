@@ -1,0 +1,25 @@
+CREATE TABLE IF NOT EXISTS transfers (
+  id TEXT PRIMARY KEY,
+  filename TEXT NOT NULL,
+  filesize INTEGER,
+  r2_key TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  description TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS videos (
+  stream_uid TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS comments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  video_id TEXT NOT NULL,
+  timestamp_seconds REAL NOT NULL,
+  author TEXT NOT NULL DEFAULT 'Anonymous',
+  body TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);

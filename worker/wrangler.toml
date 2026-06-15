@@ -1,0 +1,15 @@
+name = "portfolio-worker"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "review-uploads"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "review-comments"
+database_id = "05a73447-fa19-465b-b838-49c3c95e62da"
+
+[vars]
+R2_BUCKET_NAME = "review-uploads"
