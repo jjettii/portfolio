@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <link rel="icon" type="image/png" href="assets/favicon/favicon-96x96.png" sizes="96x96" />
@@ -8,309 +8,221 @@
     <link rel="manifest" href="assets/favicon/site.webmanifest" />
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Twenty years making videos. Full-time video production since 2021, with 150+ projects across documentary, outdoor, sports, ecommerce, and luxury.">
-    <title>Jordan Ettinger - Video Production</title>
+    <meta name="description" content="Narrative-driven video for the design and creative community. Based on Vancouver Island, Jordan Ettinger works with architects, developers, hospitality brands, and creative studios.">
+    <title>Jordan Ettinger — Video Production</title>
     <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/home.css">
 </head>
 <body>
-    <nav class="home-nav scrolled">
-        <a href="home.html" class="home-nav-logo">
+
+    <!-- Navigation -->
+    <nav class="home-nav" id="homeNav">
+        <a href="index.html" class="home-nav-logo">
             <img src="assets/img/logo.webp" alt="Jordan Ettinger">
         </a>
         <ul class="home-nav-links">
-            <li><a href="index.html" class="nav-link">Work</a></li>
-            <li><a href="reel.html" class="nav-link">Reel</a></li>
-            <li><a href="about.html" class="nav-link">About</a></li>
-            <li><a href="contact.html" class="nav-link">Contact</a></li>
+            <li><a href="portfolio.html">Work</a></li>
+            <li><a href="reel.html">Reel</a></li>
+            <li><a href="about.html">About</a></li>
+            <li><a href="contact.html">Contact</a></li>
         </ul>
     </nav>
 
-    <main class="content">
-        <div class="intro">
-            <h1>Jordan Ettinger</h1>
+    <!-- Hero -->
+    <section class="home-hero">
+        <video class="home-hero-video" autoplay muted loop playsinline preload="auto">
+            <source src="assets/webm/landing.webm" type="video/webm">
+            <source src="assets/mp4/landing.mp4" type="video/mp4">
+        </video>
+        <div class="home-hero-overlay">
+            <h1 class="home-hero-name">Jordan Ettinger</h1>
+            <p class="home-hero-tagline">Narrative-driven video &nbsp;·&nbsp; Vancouver Island</p>
         </div>
-
-        <div class="video-grid">
-                <!-- Havn -->
-                <div class="video-item" data-video-id="havn">
-                    <img src="assets/img/havn.webp" alt="Havn" class="video-poster">
-                    <video class="video-preview" muted loop preload="auto" playsinline>
-                        <source src="assets/webm/havn.webm" type="video/webm">
-                        <source src="assets/mp4/havn.mp4" type="video/mp4">
-                    </video>
-                    <div class="video-overlay">
-                        <h3>HAVN Saunas</h3>
-                    </div>
-                </div>
-
-                <!-- Lightwater Cove -->
-                <div class="video-item" data-video-id="lightwater-cove">
-                    <img src="assets/img/lightwater.webp" alt="Lightwater Cove" class="video-poster">
-                    <video class="video-preview" muted loop preload="auto" playsinline>
-                        <source src="assets/webm/lightwater-cove.webm" type="video/webm">
-                        <source src="assets/mp4/lightwater-cove.mp4" type="video/mp4">
-                    </video>
-                    <div class="video-overlay">
-                        <h3>Lightwater Cove</h3>
-                    </div>
-                </div>
-
-                <!-- Kwench Work + Culture Club -->
-                <div class="video-item" data-video-id="kwench">
-                    <img src="assets/img/kwench.webp" alt="Kwench Work + Culture Club" class="video-poster">
-                    <video class="video-preview" muted loop preload="auto" playsinline>
-                        <source src="assets/webm/kwench.webm" type="video/webm">
-                        <source src="assets/mp4/kwench.mp4" type="video/mp4">
-                    </video>
-                    <div class="video-overlay">
-                        <h3>Kwench Work + Culture Club</h3>
-                    </div>
-                </div>
-
-                <!-- Inside The Leather -->
-                <div class="video-item" data-video-id="itl">
-                    <img src="assets/img/itl.webp" alt="Inside The Leather" class="video-poster">
-                    <video class="video-preview" muted loop preload="auto" playsinline>
-                        <source src="assets/webm/itl.webm" type="video/webm">
-                        <source src="assets/mp4/itl.mp4" type="video/mp4">
-                    </video>
-                    <div class="video-overlay">
-                        <h3>Inside The Leather</h3>
-                    </div>
-                </div>
-
-                <!-- San Poncho -->
-                <div class="video-item" data-video-id="san-poncho">
-                    <img src="assets/img/san-poncho.webp" alt="San Poncho" class="video-poster">
-                    <video class="video-preview" muted loop preload="auto" playsinline>
-                        <source src="assets/webm/san-poncho.webm" type="video/webm">
-                        <source src="assets/mp4/san-poncho.mp4" type="video/mp4">
-                    </video>
-                    <div class="video-overlay">
-                        <h3>San Poncho</h3>
-                    </div>
-                </div>
-
-                <!-- Bracelayer -->
-                <div class="video-item" data-video-id="bracelayer">
-                    <img src="assets/img/bracelayer.webp" alt="Bracelayer" class="video-poster">
-                    <video class="video-preview" muted loop preload="auto" playsinline>
-                        <source src="assets/webm/bracelayer.webm" type="video/webm">
-                        <source src="assets/mp4/bracelayer.mp4" type="video/mp4">
-                    </video>
-                    <div class="video-overlay">
-                        <h3>Bracelayer</h3>
-                    </div>
-                </div>
-
-                <!-- Project Love Run -->
-                <div class="video-item" data-video-id="plr">
-                    <img src="assets/img/plr.webp" alt="Project Love Run" class="video-poster">
-                    <video class="video-preview" muted loop preload="auto" playsinline>
-                        <source src="assets/webm/plr.webm" type="video/webm">
-                        <source src="assets/mp4/plr.mp4" type="video/mp4">
-                    </video>
-                    <div class="video-overlay">
-                        <h3>Project Love Run</h3>
-                    </div>
-                </div>
-
-                <!-- Den App -->
-                <div class="video-item" data-video-id="den">
-                    <img src="assets/img/den.webp" alt="Den App" class="video-poster">
-                    <video class="video-preview" muted loop preload="auto" playsinline>
-                        <source src="assets/webm/den.webm" type="video/webm">
-                        <source src="assets/mp4/den.mp4" type="video/mp4">
-                    </video>
-                    <div class="video-overlay">
-                        <h3>Den App</h3>
-                    </div>
-                </div>
-
-                <!-- Camp Brand Goods - Edible Underwear -->
-                <div class="video-item" data-video-id="edible-underwear">
-                    <img src="assets/img/edible-underwear.webp" alt="Camp Brand Goods - Edible Underwear" class="video-poster">
-                    <video class="video-preview" muted loop preload="auto" playsinline>
-                        <source src="assets/webm/edible-underwear.webm" type="video/webm">
-                        <source src="assets/mp4/edible-underwear.mp4" type="video/mp4">
-                    </video>
-                    <div class="video-overlay">
-                        <h3>Camp Brand Goods - Edible Underwear</h3>
-                    </div>
-                </div>
-
-                <!-- Arc'teryx -->
-                <div class="video-item" data-video-id="arcteryx">
-                    <img src="assets/img/arcteryx.webp" alt="Arc'teryx" class="video-poster">
-                    <video class="video-preview" muted loop preload="auto" playsinline>
-                        <source src="assets/webm/arcteryx.webm" type="video/webm">
-                        <source src="assets/mp4/arcteryx.mp4" type="video/mp4">
-                    </video>
-                    <div class="video-overlay">
-                        <h3>Arc'teryx</h3>
-                    </div>
-                </div>
-
-                <!-- Green Acres Resort -->
-                <div class="video-item" data-video-id="green-acres">
-                    <img src="assets/img/green-acres.webp" alt="Green Acres Resort" class="video-poster">
-                    <video class="video-preview" muted loop preload="auto" playsinline>
-                        <source src="assets/webm/green-acres.webm" type="video/webm">
-                        <source src="assets/mp4/green-acres.mp4" type="video/mp4">
-                    </video>
-                    <div class="video-overlay">
-                        <h3>Green Acres Resort</h3>
-                    </div>
-                </div>
-
-                <!-- Peak Performance -->
-                <div class="video-item" data-video-id="peak-performance">
-                    <img src="assets/img/peak-performance.webp" alt="Peak Performance" class="video-poster">
-                    <video class="video-preview" muted loop preload="auto" playsinline>
-                        <source src="assets/webm/peak-performance.webm" type="video/webm">
-                        <source src="assets/mp4/peak-performance.mp4" type="video/mp4">
-                    </video>
-                    <div class="video-overlay">
-                        <h3>Peak Performance</h3>
-                    </div>
-                </div>
-
-                <!-- Sheringham Distillery -->
-                <div class="video-item" data-video-id="sheringham">
-                    <img src="assets/img/sheringham.webp" alt="Sheringham Distillery" class="video-poster">
-                    <video class="video-preview" muted loop preload="auto" playsinline>
-                        <source src="assets/webm/sheringham.webm" type="video/webm">
-                        <source src="assets/mp4/sheringham.mp4" type="video/mp4">
-                    </video>
-                    <div class="video-overlay">
-                        <h3>Sheringham Distillery</h3>
-                    </div>
-                </div>
-
-                <!-- Whistlebuoy Brewing -->
-                <div class="video-item" data-video-id="whistlebuoy">
-                    <img src="assets/img/whistlebuoy.webp" alt="Whistlebuoy Brewing" class="video-poster">
-                    <video class="video-preview" muted loop preload="auto" playsinline>
-                        <source src="assets/webm/whistlebuoy.webm" type="video/webm">
-                        <source src="assets/mp4/whistlebuoy.mp4" type="video/mp4">
-                    </video>
-                    <div class="video-overlay">
-                        <h3>Whistlebuoy Brewing</h3>
-                    </div>
-                </div>
-
-                <!-- Anian -->
-                <div class="video-item" data-video-id="anian">
-                    <img src="assets/img/anian.webp" alt="Anian" class="video-poster">
-                    <video class="video-preview" muted loop preload="auto" playsinline>
-                        <source src="assets/webm/anian.webm" type="video/webm">
-                        <source src="assets/mp4/anian.mp4" type="video/mp4">
-                    </video>
-                    <div class="video-overlay">
-                        <h3>ANIÁN</h3>
-                    </div>
-                </div>
-
-                <!-- The Run - Robinsons x Arc'teryx -->
-                <div class="video-item" data-video-id="therun">
-                    <img src="assets/img/the-run.webp" alt="The Run - Robinsons x Arc'teryx" class="video-poster">
-                    <video class="video-preview" muted loop preload="auto" playsinline>
-                        <source src="assets/webm/the-run.webm" type="video/webm">
-                        <source src="assets/mp4/the-run.mp4" type="video/mp4">
-                    </video>
-                    <div class="video-overlay">
-                        <h3>The Run - Robinsons x Arc'teryx</h3>
-                    </div>
-                </div>
-
-                <!-- Villamar -->
-                <div class="video-item" data-video-id="villamar">
-                    <img src="assets/img/villamar.webp" alt="Villamar" class="video-poster">
-                    <video class="video-preview" muted loop preload="auto" playsinline>
-                        <source src="assets/webm/villamar.webm" type="video/webm">
-                        <source src="assets/mp4/villamar.mp4" type="video/mp4">
-                    </video>
-                    <div class="video-overlay">
-                        <h3>Villamar</h3>
-                    </div>
-                </div>
-
-                <!-- Somedays -->
-                <div class="video-item" data-video-id="somedays">
-                    <img src="assets/img/somedays.webp" alt="Somedays" class="video-poster">
-                    <video class="video-preview" muted loop preload="auto" playsinline>
-                        <source src="assets/webm/somedays.webm" type="video/webm">
-                        <source src="assets/mp4/somedays.mp4" type="video/mp4">
-                    </video>
-                    <div class="video-overlay">
-                        <h3>Somedays</h3>
-                    </div>
-                </div>
-
-                <!-- Too Much -->
-                <div class="video-item" data-video-id="too-much">
-                    <img src="assets/img/too-much.webp" alt="Too Much" class="video-poster">
-                    <video class="video-preview" muted loop preload="auto" playsinline>
-                        <source src="assets/webm/too-much.webm" type="video/webm">
-                        <source src="assets/mp4/too-much.mp4" type="video/mp4">
-                    </video>
-                    <div class="video-overlay">
-                        <h3>Too Much</h3>
-                    </div>
-                </div>
-
-                <!-- Steam Mystic -->
-                <div class="video-item" data-video-id="steam-mystic">
-                    <img src="assets/img/steam-mystic.webp" alt="Steam Mystic" class="video-poster">
-                    <video class="video-preview" muted loop preload="auto" playsinline>
-                        <source src="assets/webm/steam-mystic.webm" type="video/webm">
-                        <source src="assets/mp4/steam-mystic.mp4" type="video/mp4">
-                    </video>
-                    <div class="video-overlay">
-                        <h3>Steam Mystic</h3>
-                    </div>
-                </div>
-
-                <!-- Plezzy -->
-                <div class="video-item" data-video-id="plezzy">
-                    <img src="assets/img/plezzy.webp" alt="Plezzy" class="video-poster">
-                    <video class="video-preview" muted loop preload="auto" playsinline>
-                        <source src="assets/webm/plezzy.webm" type="video/webm">
-                        <source src="assets/mp4/plezzy.mp4" type="video/mp4">
-                    </video>
-                    <div class="video-overlay">
-                        <h3>Plezzy Pleasantwear</h3>
-                    </div>
-                </div>
-
-                <!-- Bear Cub -->
-                <div class="video-item" data-video-id="bear-cub">
-                    <img src="assets/img/bear-cub.webp" alt="Bear Cub" class="video-poster">
-                    <video class="video-preview" muted loop preload="auto" playsinline>
-                        <source src="assets/webm/bear-cub.webm" type="video/webm">
-                        <source src="assets/mp4/bear-cub.mp4" type="video/mp4">
-                    </video>
-                    <div class="video-overlay">
-                        <h3>2930: The Bear Cub</h3>
-                    </div>
-                </div>
-
+        <div class="home-hero-scroll">
+            <span>Scroll</span>
+            <div class="home-hero-scroll-line"></div>
         </div>
+    </section>
 
-        <footer class="logo-footer">
-            <div class="logo-scroll">
-                <img src="assets/footer/arcteryx.webp" alt="Arc'teryx">
-                <img src="assets/footer/camp.webp" alt="Camp Brand Goods">
-                <img src="assets/footer/anian.webp" alt="Anian">
-                <img src="assets/footer/bracelayer.webp" alt="Bracelayer">
-                <img src="assets/footer/villamar.webp" alt="Villamar">
-                <img src="assets/footer/sheringham.webp" alt="Sheringham Distillery">
-                <img src="assets/footer/whistlebuoy.webp" alt="Whistlebuoy Brewing">
-                <img src="assets/footer/san-poncho.webp" alt="San Poncho">
+    <!-- Intro Text -->
+    <section class="home-intro fade-in">
+        <p class="home-intro-tagline">Narrative-driven video production for the design and creative community.</p>
+        <p class="home-intro-body">Based on Vancouver Island, I work with architects, developers, hospitality brands, and creative studios to make films that hold up next to the work they're proud of. <br> Clean, considered, and built to last.</p>
+    </section>
+
+    <!-- Featured Work -->
+    <section class="home-work">
+        <div class="home-grid">
+
+            <div class="home-video-item fade-in fade-in-delay-1" data-video-id="havn">
+                <img src="assets/img/havn.webp" alt="HAVN Saunas" class="home-video-poster">
+                <video class="home-video-preview" muted loop preload="auto" playsinline>
+                    <source src="assets/webm/havn.webm" type="video/webm">
+                    <source src="assets/mp4/havn.mp4" type="video/mp4">
+                </video>
+                <div class="home-video-overlay"><h3>HAVN Saunas</h3></div>
             </div>
-        </footer>
-    </main>
 
-    <script src="assets/js/main.js"></script>
+            <div class="home-video-item fade-in fade-in-delay-2" data-video-id="lightwater-cove">
+                <img src="assets/img/lightwater.webp" alt="Lightwater Cove" class="home-video-poster">
+                <video class="home-video-preview" muted loop preload="auto" playsinline>
+                    <source src="assets/webm/lightwater-cove.webm" type="video/webm">
+                    <source src="assets/mp4/lightwater-cove.mp4" type="video/mp4">
+                </video>
+                <div class="home-video-overlay"><h3>Lightwater Cove</h3></div>
+            </div>
+
+            <div class="home-video-item fade-in fade-in-delay-3" data-video-id="kwench">
+                <img src="assets/img/kwench.webp" alt="Kwench Work + Culture Club" class="home-video-poster">
+                <video class="home-video-preview" muted loop preload="auto" playsinline>
+                    <source src="assets/webm/kwench.webm" type="video/webm">
+                    <source src="assets/mp4/kwench.mp4" type="video/mp4">
+                </video>
+                <div class="home-video-overlay"><h3>Kwench Work + Culture Club</h3></div>
+            </div>
+
+            <div class="home-video-item fade-in fade-in-delay-4" data-video-id="arcteryx">
+                <img src="assets/img/arcteryx.webp" alt="Arc'teryx" class="home-video-poster">
+                <video class="home-video-preview" muted loop preload="auto" playsinline>
+                    <source src="assets/webm/arcteryx.webm" type="video/webm">
+                    <source src="assets/mp4/arcteryx.mp4" type="video/mp4">
+                </video>
+                <div class="home-video-overlay"><h3>Arc'teryx</h3></div>
+            </div>
+
+            <div class="home-video-item fade-in fade-in-delay-5" data-video-id="anian">
+                <img src="assets/img/anian.webp" alt="ANIÁN" class="home-video-poster">
+                <video class="home-video-preview" muted loop preload="auto" playsinline>
+                    <source src="assets/webm/anian.webm" type="video/webm">
+                    <source src="assets/mp4/anian.mp4" type="video/mp4">
+                </video>
+                <div class="home-video-overlay"><h3>ANIÁN</h3></div>
+            </div>
+
+            <div class="home-video-item fade-in fade-in-delay-6" data-video-id="villamar">
+                <img src="assets/img/Villamar.webp" alt="Villamar" class="home-video-poster">
+                <video class="home-video-preview" muted loop preload="auto" playsinline>
+                    <source src="assets/webm/villamar.webm" type="video/webm">
+                    <source src="assets/mp4/villamar.mp4" type="video/mp4">
+                </video>
+                <div class="home-video-overlay"><h3>Villamar</h3></div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="home-cta fade-in">
+        <p class="home-cta-text">Ready to make something?</p>
+        <a href="contact.html" class="home-cta-link">Get in touch</a>
+    </section>
+
+    <!-- Client Logos -->
+    <footer class="home-logos fade-in">
+        <div class="home-logo-scroll">
+            <img src="assets/footer/arcteryx.webp" alt="Arc'teryx">
+            <img src="assets/footer/camp.webp" alt="Camp Brand Goods">
+            <img src="assets/footer/anian.webp" alt="Anian">
+            <img src="assets/footer/bracelayer.webp" alt="Bracelayer">
+            <img src="assets/footer/villamar.webp" alt="Villamar">
+            <img src="assets/footer/sheringham.webp" alt="Sheringham Distillery">
+            <img src="assets/footer/whistlebuoy.webp" alt="Whistlebuoy Brewing">
+            <img src="assets/footer/san-poncho.webp" alt="San Poncho">
+        </div>
+    </footer>
+
+    <!-- Footer -->
+    <footer class="home-footer">
+        <span>© 2026 Jordan Ettinger</span>
+        <ul class="home-footer-links">
+            <li><a href="portfolio.html">Work</a></li>
+            <li><a href="reel.html">Reel</a></li>
+            <li><a href="about.html">About</a></li>
+            <li><a href="contact.html">Contact</a></li>
+        </ul>
+    </footer>
+
+    <script>
+        // ─── Nav scroll opacity ───────────────────────
+        const nav = document.getElementById('homeNav');
+        window.addEventListener('scroll', function () {
+            if (window.scrollY > 60) {
+                nav.classList.add('scrolled');
+            } else {
+                nav.classList.remove('scrolled');
+            }
+        }, { passive: true });
+
+        // ─── Scroll fade-ins ──────────────────────────
+        const fadeEls = document.querySelectorAll('.fade-in');
+        const observer = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.12 });
+
+        fadeEls.forEach(function (el) { observer.observe(el); });
+
+        // ─── Video hover previews ─────────────────────
+        const projectPages = {
+            'havn':           'projects/havn.html',
+            'lightwater-cove':'projects/lightwater-cove.html',
+            'kwench':         'projects/kwench.html',
+            'arcteryx':       'projects/arcteryx.html',
+            'anian':          'projects/anian.html',
+            'villamar':       'projects/villamar.html'
+        };
+
+        const videoItems = document.querySelectorAll('.home-video-item');
+        let currentlyPlaying = null;
+        let touchStarted = false;
+
+        videoItems.forEach(function (item) {
+            const video = item.querySelector('.home-video-preview');
+            const videoId = item.dataset.videoId;
+
+            item.addEventListener('mouseenter', function () {
+                if (!touchStarted) {
+                    video.play().catch(function () {});
+                    item.classList.add('playing');
+                }
+            });
+
+            item.addEventListener('mouseleave', function () {
+                if (!touchStarted) {
+                    video.pause();
+                    video.currentTime = 0;
+                    item.classList.remove('playing');
+                }
+            });
+
+            item.addEventListener('click', function (e) {
+                e.preventDefault();
+                if (!item.classList.contains('playing')) {
+                    if (currentlyPlaying && currentlyPlaying !== item) {
+                        const prev = currentlyPlaying.querySelector('.home-video-preview');
+                        prev.pause();
+                        prev.currentTime = 0;
+                        currentlyPlaying.classList.remove('playing');
+                    }
+                    video.load();
+                    video.play().catch(function () {});
+                    item.classList.add('playing');
+                    currentlyPlaying = item;
+                } else {
+                    const target = projectPages[videoId];
+                    if (target) window.location.href = target;
+                }
+            });
+
+            item.addEventListener('touchstart', function () {
+                touchStarted = true;
+            }, { passive: true });
+        });
+    </script>
+
 </body>
 </html>
