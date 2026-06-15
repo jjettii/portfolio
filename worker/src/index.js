@@ -4,7 +4,7 @@ import { AwsClient } from 'aws4fetch';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
@@ -150,6 +150,137 @@ async function handleTransferDelete(request, env, id) {
   return json({ ok: true });
 }
 
+// ─── Review Handlers ─────────────────────────────────────────────────────────
+
+async function handleReviewCreate(request, env) {
+  const denied = requireAdmin(request, env);
+  if (denied) return denied;
+
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
+
+  const { name, password } = body;
+  if (!name || !password) return json({ error: 'name and password are required' }, 400);
+
+  const id = crypto.randomUUID();
+  const passwordHash = await hashPassword(password, env);
+
+  await env.DB.prepare(
+    `INSERT INTO reviews (id, name, password_hash) VALUES (?, ?, ?)`
+  ).bind(id, name, passwordHash).run();
+
+  return json({ id });
+}
+
+async function handleReviewList(request, env) {
+  const denied = requireAdmin(request, env);
+  if (denied) return denied;
+
+  const { results } = await env.DB.prepare(
+    `SELECT r.id, r.name, r.created_at,
+            COUNT(v.stream_uid) AS video_count
+     FROM reviews r
+     LEFT JOIN videos v ON v.review_id = r.id
+     GROUP BY r.id
+     ORDER BY r.created_at DESC`
+  ).all();
+
+  return json(results);
+}
+
+async function handleReviewInfo(request, env, id) {
+  if (isAdmin(request, env)) {
+    const row = await env.DB.prepare(
+      `SELECT id, name, created_at FROM reviews WHERE id = ?`
+    ).bind(id).first();
+    if (!row) return json({ error: 'Review not found' }, 404);
+    return json(row);
+  }
+
+  const url = new URL(request.url);
+  const password = url.searchParams.get('password') || '';
+
+  const row = await env.DB.prepare(
+    `SELECT id, name, created_at, password_hash FROM reviews WHERE id = ?`
+  ).bind(id).first();
+
+  if (!row) return json({ error: 'Review not found' }, 404);
+
+  const hash = await hashPassword(password, env);
+  if (hash !== row.password_hash) return json({ error: 'Invalid ID or password.' }, 403);
+
+  return json({ id: row.id, name: row.name, created_at: row.created_at });
+}
+
+async function handleReviewUpdate(request, env, id) {
+  const denied = requireAdmin(request, env);
+  if (denied) return denied;
+
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
+
+  const row = await env.DB.prepare(`SELECT id FROM reviews WHERE id = ?`).bind(id).first();
+  if (!row) return json({ error: 'Review not found' }, 404);
+
+  const updates = [];
+  const values = [];
+
+  if (body.name) { updates.push('name = ?'); values.push(body.name); }
+  if (body.password) { updates.push('password_hash = ?'); values.push(await hashPassword(body.password, env)); }
+
+  if (!updates.length) return json({ error: 'Nothing to update' }, 400);
+
+  values.push(id);
+  await env.DB.prepare(`UPDATE reviews SET ${updates.join(', ')} WHERE id = ?`).bind(...values).run();
+
+  return json({ ok: true });
+}
+
+async function handleReviewDelete(request, env, id) {
+  const denied = requireAdmin(request, env);
+  if (denied) return denied;
+
+  const { results: videos } = await env.DB.prepare(
+    `SELECT stream_uid FROM videos WHERE review_id = ?`
+  ).bind(id).all();
+
+  for (const v of videos) {
+    await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/stream/${v.stream_uid}`,
+      { method: 'DELETE', headers: { Authorization: `Bearer ${env.STREAM_API_TOKEN}` } }
+    );
+    await env.DB.prepare(`DELETE FROM comments WHERE video_id = ?`).bind(v.stream_uid).run();
+    await env.DB.prepare(`DELETE FROM videos WHERE stream_uid = ?`).bind(v.stream_uid).run();
+  }
+
+  await env.DB.prepare(`DELETE FROM reviews WHERE id = ?`).bind(id).run();
+
+  return json({ ok: true });
+}
+
+async function handleReviewVideos(request, env, id) {
+  if (!isAdmin(request, env)) {
+    const url = new URL(request.url);
+    const password = url.searchParams.get('password') || '';
+
+    const row = await env.DB.prepare(
+      `SELECT password_hash FROM reviews WHERE id = ?`
+    ).bind(id).first();
+
+    if (!row) return json({ error: 'Review not found' }, 404);
+
+    const hash = await hashPassword(password, env);
+    if (hash !== row.password_hash) return json({ error: 'Invalid password' }, 403);
+  }
+
+  const { results } = await env.DB.prepare(
+    `SELECT stream_uid, title, description, created_at
+     FROM videos WHERE review_id = ? ORDER BY created_at ASC`
+  ).bind(id).all();
+
+  return json(results);
+}
+
 // ─── Stream Handlers ─────────────────────────────────────────────────────────
 
 async function handleStreamUploadCreate(request, env) {
@@ -159,10 +290,13 @@ async function handleStreamUploadCreate(request, env) {
   let body;
   try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
 
-  const { title, description } = body;
+  const { title, description, review_id } = body;
   if (!title) return json({ error: 'title is required' }, 400);
+  if (!review_id) return json({ error: 'review_id is required' }, 400);
 
-  // direct_upload is the CORS-friendly endpoint designed for browser uploads
+  const reviewRow = await env.DB.prepare(`SELECT id FROM reviews WHERE id = ?`).bind(review_id).first();
+  if (!reviewRow) return json({ error: 'Review not found' }, 404);
+
   const resp = await fetch(
     `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/stream/direct_upload`,
     {
@@ -188,18 +322,19 @@ async function handleStreamUploadCreate(request, env) {
   const uploadUrl = result.uploadURL;
   const streamUid = result.uid;
 
-  // Register video in D1 so clients can list it without Stream API access
   await env.DB.prepare(
-    `INSERT INTO videos (stream_uid, title, description) VALUES (?, ?, ?)`
-  ).bind(streamUid, title, description || null).run();
+    `INSERT INTO videos (stream_uid, title, description, review_id) VALUES (?, ?, ?, ?)`
+  ).bind(streamUid, title, description || null, review_id).run();
 
   return json({ uploadUrl, streamUid });
 }
 
 async function handleStreamVideoList(request, env) {
-  // Public endpoint — reads from D1, not Stream API
+  const denied = requireAdmin(request, env);
+  if (denied) return denied;
+
   const { results } = await env.DB.prepare(
-    `SELECT stream_uid, title, description, created_at FROM videos ORDER BY created_at DESC`
+    `SELECT stream_uid, title, description, review_id, created_at FROM videos ORDER BY created_at DESC`
   ).all();
 
   return json(results);
@@ -209,7 +344,6 @@ async function handleStreamVideoDelete(request, env, streamUid) {
   const denied = requireAdmin(request, env);
   if (denied) return denied;
 
-  // Delete from Stream
   await fetch(
     `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/stream/${streamUid}`,
     {
@@ -218,10 +352,7 @@ async function handleStreamVideoDelete(request, env, streamUid) {
     }
   );
 
-  // Delete comments for this video
   await env.DB.prepare(`DELETE FROM comments WHERE video_id = ?`).bind(streamUid).run();
-
-  // Remove from D1
   await env.DB.prepare(`DELETE FROM videos WHERE stream_uid = ?`).bind(streamUid).run();
 
   return json({ ok: true });
@@ -296,6 +427,26 @@ export default {
             : handleTransferInfo(request, env, id);
         }
         if (method === 'DELETE') return handleTransferDelete(request, env, id);
+      }
+
+      // ── Reviews ──
+      if (pathname === '/api/review/create' && method === 'POST') {
+        return handleReviewCreate(request, env);
+      }
+      if (pathname === '/api/reviews' && method === 'GET') {
+        return handleReviewList(request, env);
+      }
+
+      const reviewMatch = pathname.match(/^\/api\/review\/([^/]+)(\/videos)?$/);
+      if (reviewMatch) {
+        const [, rid, sub] = reviewMatch;
+        if (method === 'GET') {
+          return sub === '/videos'
+            ? handleReviewVideos(request, env, rid)
+            : handleReviewInfo(request, env, rid);
+        }
+        if (method === 'PATCH') return handleReviewUpdate(request, env, rid);
+        if (method === 'DELETE') return handleReviewDelete(request, env, rid);
       }
 
       // ── Stream ──

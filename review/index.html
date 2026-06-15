@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -23,7 +23,7 @@
       z-index: 50;
     }
     .rv-logo img { height: 20px; width: auto; display: block; }
-    .rv-header-actions { display: flex; gap: 12px; align-items: center; }
+    .rv-header-actions { display: flex; gap: 10px; align-items: center; }
 
     /* ── Buttons ── */
     .rv-btn {
@@ -46,27 +46,85 @@
       border: 1px solid #ccc;
     }
     .rv-btn-ghost:hover { border-color: #000; }
-    .rv-btn-sm {
-      padding: 6px 14px;
-      font-size: 10px;
-    }
+    .rv-btn-sm { padding: 6px 14px; font-size: 10px; }
     .rv-btn-danger { background: #c00; }
 
     /* ── Panels ── */
     .rv-panel { display: none; }
     .rv-panel.active { display: block; }
 
-    /* ── Video list ── */
-    .rv-list-wrap {
+    /* ── Gate panel ── */
+    .rv-gate-wrap {
+      max-width: 440px;
+      margin: 0 auto;
+      padding: 80px 24px;
+    }
+    .rv-gate-heading {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+    .rv-gate-sub {
+      font-size: 14px;
+      font-weight: 300;
+      color: #666;
+      margin-bottom: 40px;
+    }
+
+    /* ── Admin dashboard panel ── */
+    .rv-admin-wrap {
       max-width: 900px;
       margin: 0 auto;
       padding: 48px 40px;
     }
-    .rv-list-heading {
+    .rv-admin-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 40px;
+    }
+    .rv-admin-heading {
       font-size: 28px;
       font-weight: 700;
       letter-spacing: -0.02em;
+    }
+    .rv-review-list { margin-top: 8px; }
+    .rv-review-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 0;
+      border-bottom: 1px solid #e0e0e0;
+      gap: 16px;
+    }
+    .rv-review-info { flex: 1; min-width: 0; }
+    .rv-review-name {
+      font-size: 15px;
+      font-weight: 400;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .rv-review-meta { font-size: 12px; font-weight: 300; color: #888; margin-top: 3px; }
+    .rv-review-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+    /* ── Session panel (video grid) ── */
+    .rv-session-wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 48px 40px;
+    }
+    .rv-session-nav {
+      display: flex;
+      align-items: center;
+      gap: 16px;
       margin-bottom: 32px;
+    }
+    .rv-session-title {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
     }
     .rv-grid {
       display: grid;
@@ -97,29 +155,27 @@
     }
     .rv-thumb-meta { font-size: 12px; font-weight: 300; color: #888; }
     .rv-thumb-desc { font-size: 12px; font-weight: 300; color: #666; margin-top: 4px; }
-
     .rv-empty {
       text-align: center;
       padding: 80px 0;
       color: #aaa;
       font-size: 14px;
       font-weight: 300;
+      grid-column: 1 / -1;
     }
 
-    /* ── Player view ── */
+    /* ── Player panel ── */
     .rv-player-wrap {
       display: flex;
       height: calc(100vh - 73px);
       overflow: hidden;
     }
-
     .rv-player-main {
       flex: 1;
       display: flex;
       flex-direction: column;
       overflow: hidden;
     }
-
     .rv-player-top {
       display: flex;
       align-items: center;
@@ -148,7 +204,6 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-
     .rv-player-frame {
       flex: 1;
       position: relative;
@@ -161,7 +216,6 @@
       height: 100%;
       border: none;
     }
-
     .rv-player-controls {
       padding: 12px 24px;
       border-top: 1px solid #e0e0e0;
@@ -187,7 +241,6 @@
       flex-direction: column;
       overflow: hidden;
     }
-
     .rv-sidebar-head {
       padding: 16px 20px;
       border-bottom: 1px solid #e0e0e0;
@@ -196,13 +249,11 @@
       letter-spacing: 0.5px;
       text-transform: uppercase;
     }
-
     .rv-comment-list {
       flex: 1;
       overflow-y: auto;
       padding: 8px 0;
     }
-
     .rv-comment {
       padding: 12px 20px;
       border-bottom: 1px solid #f0f0f0;
@@ -246,7 +297,6 @@
       transition: color 0.2s;
     }
     .rv-comment-delete:hover { color: #c00; }
-
     .rv-comment-form {
       border-top: 1px solid #e0e0e0;
       padding: 16px 20px;
@@ -285,7 +335,36 @@
       margin-bottom: 6px;
     }
 
-    /* ── Admin upload modal ── */
+    /* ── Shared form styles ── */
+    .rv-field { margin-bottom: 18px; }
+    .rv-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 7px;
+    }
+    .rv-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ccc;
+      font-family: 'AkzidenzGrotesk', sans-serif;
+      font-size: 14px;
+      font-weight: 300;
+      transition: border-color 0.2s;
+    }
+    .rv-input:focus { outline: none; border-color: #000; }
+    .rv-error {
+      color: #c00;
+      font-size: 13px;
+      font-weight: 300;
+      margin-top: 8px;
+      display: none;
+    }
+    .rv-notice { font-size: 13px; font-weight: 300; color: #888; }
+
+    /* ── Modals ── */
     .rv-modal-bg {
       display: none;
       position: fixed;
@@ -308,33 +387,16 @@
       font-weight: 700;
       margin-bottom: 24px;
     }
-    .rv-field { margin-bottom: 18px; }
-    .rv-label {
-      display: block;
-      font-size: 11px;
-      font-weight: 400;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      margin-bottom: 7px;
-    }
-    .rv-input {
-      width: 100%;
-      padding: 10px 12px;
-      border: 1px solid #ccc;
-      font-family: 'AkzidenzGrotesk', sans-serif;
-      font-size: 14px;
-      font-weight: 300;
-      transition: border-color 0.2s;
-    }
-    .rv-input:focus { outline: none; border-color: #000; }
     .rv-modal-actions { display: flex; gap: 12px; margin-top: 24px; }
+    .rv-modal-note { font-size: 12px; font-weight: 300; color: #888; margin-top: 6px; display: none; }
+
+    /* Upload progress */
     .rv-upload-progress { margin-top: 16px; display: none; }
     .rv-upload-bar-wrap { height: 3px; background: #eee; margin-bottom: 6px; }
     .rv-upload-bar { height: 3px; background: #000; width: 0%; transition: width 0.3s; }
     .rv-upload-label { font-size: 12px; font-weight: 300; color: #666; }
-    .rv-modal-err { color: #c00; font-size: 13px; margin-top: 8px; font-weight: 300; display: none; }
 
-    /* ── Admin auth modal ── */
+    /* Admin auth overlay */
     .rv-auth-bg {
       display: none;
       position: fixed;
@@ -348,16 +410,16 @@
     .rv-auth-box { width: 100%; max-width: 360px; padding: 20px; }
     .rv-auth-box h2 { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
 
-    /* ── Misc ── */
-    .rv-notice { font-size: 13px; font-weight: 300; color: #888; }
-
     @media (max-width: 768px) {
       .rv-header { padding: 18px 20px; }
+      .rv-gate-wrap { padding: 60px 20px; }
+      .rv-admin-wrap { padding: 32px 20px; }
+      .rv-session-wrap { padding: 32px 20px; }
+      .rv-review-actions { flex-wrap: wrap; }
       .rv-player-wrap { flex-direction: column; height: auto; }
       .rv-sidebar { width: 100%; border-left: none; border-top: 1px solid #e0e0e0; height: 50vh; }
       .rv-player-frame { aspect-ratio: 16/9; position: relative; height: auto; flex: none; }
       .rv-player-frame iframe { position: static; height: 100%; }
-      .rv-list-wrap { padding: 32px 20px; }
       .rv-grid { grid-template-columns: 1fr; }
     }
   </style>
@@ -374,24 +436,60 @@
   </div>
 </header>
 
-<!-- ═══ VIDEO LIST PANEL ══════════════════════════════════════════════════════ -->
-<div class="rv-panel active" id="panelList">
-  <div class="rv-list-wrap">
-    <h1 class="rv-list-heading">Review</h1>
-    <div class="rv-grid" id="videoGrid">
-      <p class="rv-notice" id="gridNotice" style="grid-column:1/-1">Loading…</p>
+<!-- ═══ GATE PANEL ══════════════════════════════════════════════════════════ -->
+<div class="rv-panel active" id="panelGate">
+  <div class="rv-gate-wrap">
+    <h1 class="rv-gate-heading">Video Review</h1>
+    <p class="rv-gate-sub">Enter your review ID and password to access your videos.</p>
+
+    <div class="rv-field">
+      <label class="rv-label" for="gateId">Review ID</label>
+      <input class="rv-input" type="text" id="gateId" placeholder="e.g. 3f2a7b1c-…"
+             autocomplete="off" spellcheck="false">
+    </div>
+    <div class="rv-field">
+      <label class="rv-label" for="gatePass">Password</label>
+      <input class="rv-input" type="password" id="gatePass" placeholder="Password"
+             autocomplete="off" onkeydown="if(event.key==='Enter')accessReview()">
+      <div class="rv-error" id="gateError"></div>
+    </div>
+    <button class="rv-btn" id="gateBtn" onclick="accessReview()" style="width:100%">Access Review</button>
+  </div>
+</div>
+
+<!-- ═══ ADMIN PANEL ══════════════════════════════════════════════════════════ -->
+<div class="rv-panel" id="panelAdmin">
+  <div class="rv-admin-wrap">
+    <div class="rv-admin-head">
+      <h1 class="rv-admin-heading">Reviews</h1>
+      <button class="rv-btn rv-btn-sm" onclick="openNewReviewModal()">+ New Review</button>
+    </div>
+    <div class="rv-review-list" id="reviewList">
+      <p class="rv-notice">Loading…</p>
     </div>
   </div>
 </div>
 
-<!-- ═══ PLAYER PANEL ══════════════════════════════════════════════════════════ -->
+<!-- ═══ SESSION PANEL (video grid) ══════════════════════════════════════════ -->
+<div class="rv-panel" id="panelSession">
+  <div class="rv-session-wrap">
+    <div class="rv-session-nav">
+      <button class="rv-back-btn" id="sessionBackBtn" onclick="backFromSession()">← All Reviews</button>
+      <h1 class="rv-session-title" id="sessionTitle"></h1>
+    </div>
+    <div class="rv-grid" id="videoGrid">
+      <p class="rv-notice" style="grid-column:1/-1">Loading…</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PLAYER PANEL ════════════════════════════════════════════════════════ -->
 <div class="rv-panel" id="panelPlayer">
   <div class="rv-player-wrap">
 
-    <!-- Left: video + controls -->
     <div class="rv-player-main">
       <div class="rv-player-top">
-        <button class="rv-back-btn" onclick="backToList()">← All videos</button>
+        <button class="rv-back-btn" onclick="backToSession()">← All videos</button>
         <div class="rv-player-title" id="playerTitle"></div>
         <div id="adminVideoActions" style="display:none">
           <button class="rv-btn rv-btn-sm rv-btn-danger" onclick="deleteCurrentVideo()">Delete video</button>
@@ -411,7 +509,6 @@
       </div>
     </div>
 
-    <!-- Right: comments -->
     <div class="rv-sidebar">
       <div class="rv-sidebar-head">Comments</div>
       <div class="rv-comment-list" id="commentList">
@@ -430,10 +527,33 @@
   </div>
 </div>
 
-<!-- ═══ UPLOAD MODAL ══════════════════════════════════════════════════════════ -->
+<!-- ═══ NEW / EDIT REVIEW MODAL ══════════════════════════════════════════════ -->
+<div class="rv-modal-bg" id="reviewModal">
+  <div class="rv-modal">
+    <h2 id="reviewModalTitle">New Review</h2>
+    <div class="rv-field">
+      <label class="rv-label" for="reviewName">Review Name</label>
+      <input class="rv-input" type="text" id="reviewName" placeholder="e.g. Havn Saunas — Round 1"
+             onkeydown="if(event.key==='Enter')saveReview()">
+    </div>
+    <div class="rv-field">
+      <label class="rv-label" id="reviewPassLabel" for="reviewPass">Client Password</label>
+      <input class="rv-input" type="text" id="reviewPass" placeholder="Password you'll share with the client"
+             autocomplete="off" onkeydown="if(event.key==='Enter')saveReview()">
+      <p class="rv-modal-note" id="reviewPassNote">Leave blank to keep the current password.</p>
+    </div>
+    <div class="rv-error" id="reviewModalErr"></div>
+    <div class="rv-modal-actions">
+      <button class="rv-btn" id="reviewModalSaveBtn" onclick="saveReview()">Save</button>
+      <button class="rv-btn rv-btn-ghost" onclick="closeReviewModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ UPLOAD MODAL ════════════════════════════════════════════════════════ -->
 <div class="rv-modal-bg" id="uploadModal">
   <div class="rv-modal">
-    <h2>Upload to Stream</h2>
+    <h2>Upload Video</h2>
 
     <div class="rv-field">
       <label class="rv-label" for="upTitle">Video Title</label>
@@ -454,7 +574,7 @@
       </div>
       <div class="rv-upload-label" id="modalLabel">Uploading…</div>
     </div>
-    <div class="rv-modal-err" id="modalErr"></div>
+    <div class="rv-error" id="modalErr"></div>
 
     <div class="rv-modal-actions">
       <button class="rv-btn" id="modalUploadBtn" onclick="doStreamUpload()">Upload</button>
@@ -463,7 +583,7 @@
   </div>
 </div>
 
-<!-- ═══ ADMIN AUTH MODAL ══════════════════════════════════════════════════════ -->
+<!-- ═══ ADMIN AUTH OVERLAY ══════════════════════════════════════════════════ -->
 <div class="rv-auth-bg" id="adminAuthBg">
   <div class="rv-auth-box">
     <h2>Admin Sign In</h2>
@@ -471,7 +591,7 @@
       <label class="rv-label" for="authPass">Admin Password</label>
       <input class="rv-input" type="password" id="authPass" placeholder="Password"
              onkeydown="if(event.key==='Enter')authLogin()">
-      <div class="rv-modal-err" id="authErr"></div>
+      <div class="rv-error" id="authErr"></div>
     </div>
     <div class="rv-modal-actions">
       <button class="rv-btn" onclick="authLogin()">Sign In</button>
@@ -481,27 +601,55 @@
 </div>
 
 <script>
-// ─── Config — update after `wrangler deploy` ─────────────────────────────────
+// ─── Config ──────────────────────────────────────────────────────────────────
 const WORKER_URL = 'https://portfolio-worker.jordanettinger.workers.dev';
 
 // ─── State ───────────────────────────────────────────────────────────────────
 let adminToken = null;
-let currentVideo = null;         // { stream_uid, title, description }
-let currentTime = 0;             // seconds, polled from iframe via postMessage
+let currentSession = null;   // { id, name }
+let sessionPassword = null;  // client's password for the current session
+let isAdminSession = false;  // true when admin opened session (no password required)
+let currentVideo = null;     // { stream_uid, title, description }
+let currentTime = 0;
 let commentsCache = [];
+let editingReviewId = null;
+
+// ─── Panel management ─────────────────────────────────────────────────────────
+function showPanel(name) {
+  document.querySelectorAll('.rv-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel' + name).classList.add('active');
+  updateHeader(name);
+}
+
+function updateHeader(panel) {
+  const ha = document.getElementById('headerActions');
+  if (!adminToken) {
+    ha.innerHTML = `<button class="rv-btn rv-btn-ghost rv-btn-sm" onclick="openAdminAuth()">Admin</button>`;
+    return;
+  }
+  const signOut = `<button class="rv-btn rv-btn-ghost rv-btn-sm" onclick="adminLogout()">Sign out</button>`;
+  if (panel === 'Admin') {
+    ha.innerHTML = signOut;
+  } else if (panel === 'Session') {
+    ha.innerHTML = `
+      <button class="rv-btn rv-btn-sm" onclick="openUploadModal()">+ Upload Video</button>
+      <button class="rv-btn rv-btn-ghost rv-btn-sm" onclick="goToAdmin()">All Reviews</button>
+      ${signOut}
+    `;
+  } else {
+    ha.innerHTML = signOut;
+  }
+}
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 (function init() {
-  const params = new URLSearchParams(location.search);
-  const vid = params.get('v');
-  if (vid) {
-    // Deep link to a specific video
-    openVideoById(vid);
-  } else {
-    loadVideoList();
+  const id = new URLSearchParams(location.search).get('id');
+  if (id) {
+    document.getElementById('gateId').value = id;
+    setTimeout(() => document.getElementById('gatePass').focus(), 100);
   }
+  showPanel('Gate');
 
-  // Poll Stream player for current time via postMessage
   window.addEventListener('message', function (e) {
     if (e.data && typeof e.data.currentTime === 'number') {
       currentTime = e.data.currentTime;
@@ -511,32 +659,268 @@ let commentsCache = [];
   });
 })();
 
-// ─── Video list ───────────────────────────────────────────────────────────────
-async function loadVideoList() {
+// ─── Gate ─────────────────────────────────────────────────────────────────────
+async function accessReview() {
+  const id = document.getElementById('gateId').value.trim();
+  const pass = document.getElementById('gatePass').value;
+  const errEl = document.getElementById('gateError');
+  const btn = document.getElementById('gateBtn');
+
+  errEl.style.display = 'none';
+  if (!id || !pass) { showErr(errEl, 'Enter both fields.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Checking…';
+
   try {
-    const resp = await fetch(`${WORKER_URL}/api/stream/videos`);
+    const resp = await fetch(
+      `${WORKER_URL}/api/review/${encodeURIComponent(id)}?password=${encodeURIComponent(pass)}`
+    );
+    const data = await resp.json();
+
+    if (!resp.ok) { showErr(errEl, data.error || 'Invalid ID or password.'); return; }
+
+    currentSession = { id: data.id, name: data.name };
+    sessionPassword = pass;
+    isAdminSession = false;
+    history.pushState(null, '', `?id=${id}`);
+    await loadSessionVideos();
+    showPanel('Session');
+    document.getElementById('sessionBackBtn').style.display = 'none';
+  } catch {
+    showErr(errEl, 'Network error. Try again.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Access Review';
+  }
+}
+
+// ─── Admin Auth ───────────────────────────────────────────────────────────────
+function openAdminAuth() {
+  document.getElementById('adminAuthBg').classList.add('open');
+  document.getElementById('authPass').value = '';
+  document.getElementById('authErr').style.display = 'none';
+  setTimeout(() => document.getElementById('authPass').focus(), 100);
+}
+function closeAdminAuth() {
+  document.getElementById('adminAuthBg').classList.remove('open');
+}
+
+async function authLogin() {
+  const pass = document.getElementById('authPass').value;
+  const errEl = document.getElementById('authErr');
+  errEl.style.display = 'none';
+
+  const resp = await fetch(`${WORKER_URL}/api/reviews`, {
+    headers: { Authorization: `Bearer ${pass}` },
+  });
+
+  if (!resp.ok) {
+    errEl.textContent = 'Incorrect password.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  adminToken = pass;
+  closeAdminAuth();
+  renderAdminReviewList(await resp.json());
+  showPanel('Admin');
+}
+
+function adminLogout() {
+  adminToken = null;
+  currentSession = null;
+  sessionPassword = null;
+  isAdminSession = false;
+  history.pushState(null, '', location.pathname);
+  document.getElementById('gateId').value = '';
+  document.getElementById('gatePass').value = '';
+  showPanel('Gate');
+}
+
+// ─── Admin Panel ──────────────────────────────────────────────────────────────
+async function goToAdmin() {
+  const resp = await fetch(`${WORKER_URL}/api/reviews`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  if (resp.ok) renderAdminReviewList(await resp.json());
+  showPanel('Admin');
+}
+
+function renderAdminReviewList(sessions) {
+  const el = document.getElementById('reviewList');
+  if (!sessions.length) {
+    el.innerHTML = '<p class="rv-notice" style="padding:24px 0">No reviews yet. Create one to get started.</p>';
+    return;
+  }
+  el.innerHTML = sessions.map(s => `
+    <div class="rv-review-item">
+      <div class="rv-review-info">
+        <div class="rv-review-name">${esc(s.name)}</div>
+        <div class="rv-review-meta">
+          ${s.video_count} video${s.video_count !== 1 ? 's' : ''}
+          · ${new Date(s.created_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}
+        </div>
+      </div>
+      <div class="rv-review-actions">
+        <button class="rv-btn rv-btn-sm rv-btn-ghost"
+                onclick="copyReviewLink('${esc(s.id)}', this)">Copy link</button>
+        <button class="rv-btn rv-btn-sm"
+                onclick="adminOpenSession('${esc(s.id)}', '${esc(s.name)}')">Open</button>
+        <button class="rv-btn rv-btn-sm rv-btn-ghost"
+                onclick="openEditReviewModal('${esc(s.id)}', '${esc(s.name)}')">Edit</button>
+        <button class="rv-btn rv-btn-sm rv-btn-danger"
+                onclick="deleteReview('${esc(s.id)}', '${esc(s.name)}')">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function copyReviewLink(id, btn) {
+  const url = location.origin + '/review/?id=' + id;
+  navigator.clipboard.writeText(url).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = url;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+  });
+  const prev = btn.textContent;
+  btn.textContent = 'Copied!';
+  setTimeout(() => { btn.textContent = prev; }, 2000);
+}
+
+async function adminOpenSession(id, name) {
+  currentSession = { id, name };
+  isAdminSession = true;
+  sessionPassword = null;
+  history.pushState(null, '', `?id=${id}`);
+  await loadSessionVideos();
+  document.getElementById('sessionBackBtn').style.display = 'inline';
+  showPanel('Session');
+}
+
+async function deleteReview(id, name) {
+  if (!confirm(`Delete review "${name}"?\nThis will permanently delete all videos and comments.`)) return;
+  const resp = await fetch(`${WORKER_URL}/api/review/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  if (resp.ok) goToAdmin();
+  else alert('Delete failed.');
+}
+
+// ─── New / Edit Review Modal ──────────────────────────────────────────────────
+function openNewReviewModal() {
+  editingReviewId = null;
+  document.getElementById('reviewModalTitle').textContent = 'New Review';
+  document.getElementById('reviewName').value = '';
+  document.getElementById('reviewPass').value = '';
+  document.getElementById('reviewPassLabel').textContent = 'Client Password';
+  document.getElementById('reviewPassNote').style.display = 'none';
+  document.getElementById('reviewModalErr').style.display = 'none';
+  document.getElementById('reviewModalSaveBtn').textContent = 'Save';
+  document.getElementById('reviewModal').classList.add('open');
+  setTimeout(() => document.getElementById('reviewName').focus(), 100);
+}
+
+function openEditReviewModal(id, name) {
+  editingReviewId = id;
+  document.getElementById('reviewModalTitle').textContent = 'Edit Review';
+  document.getElementById('reviewName').value = name;
+  document.getElementById('reviewPass').value = '';
+  document.getElementById('reviewPassLabel').textContent = 'New Password';
+  document.getElementById('reviewPassNote').style.display = 'block';
+  document.getElementById('reviewModalErr').style.display = 'none';
+  document.getElementById('reviewModalSaveBtn').textContent = 'Save';
+  document.getElementById('reviewModal').classList.add('open');
+  setTimeout(() => document.getElementById('reviewName').focus(), 100);
+}
+
+function closeReviewModal() {
+  document.getElementById('reviewModal').classList.remove('open');
+}
+
+async function saveReview() {
+  const name = document.getElementById('reviewName').value.trim();
+  const pass = document.getElementById('reviewPass').value.trim();
+  const errEl = document.getElementById('reviewModalErr');
+  const btn = document.getElementById('reviewModalSaveBtn');
+  errEl.style.display = 'none';
+
+  if (!name) { showErr(errEl, 'Enter a review name.'); return; }
+  if (!editingReviewId && !pass) { showErr(errEl, 'Enter a client password.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  try {
+    let resp;
+    if (editingReviewId) {
+      const body = { name };
+      if (pass) body.password = pass;
+      resp = await fetch(`${WORKER_URL}/api/review/${encodeURIComponent(editingReviewId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify(body),
+      });
+    } else {
+      resp = await fetch(`${WORKER_URL}/api/review/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ name, password: pass }),
+      });
+    }
+
+    if (!resp.ok) {
+      const d = await resp.json();
+      showErr(errEl, d.error || 'Something went wrong.');
+      return;
+    }
+
+    closeReviewModal();
+    await goToAdmin();
+  } catch {
+    showErr(errEl, 'Network error.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save';
+  }
+}
+
+// ─── Session (video grid) ─────────────────────────────────────────────────────
+async function loadSessionVideos() {
+  document.getElementById('sessionTitle').textContent = currentSession.name;
+  const grid = document.getElementById('videoGrid');
+  grid.innerHTML = '<p class="rv-notice" style="grid-column:1/-1">Loading…</p>';
+
+  try {
+    const url = isAdminSession
+      ? `${WORKER_URL}/api/review/${encodeURIComponent(currentSession.id)}/videos`
+      : `${WORKER_URL}/api/review/${encodeURIComponent(currentSession.id)}/videos?password=${encodeURIComponent(sessionPassword)}`;
+    const headers = isAdminSession ? { Authorization: `Bearer ${adminToken}` } : {};
+    const resp = await fetch(url, { headers });
     const videos = await resp.json();
     renderVideoGrid(videos);
   } catch {
-    document.getElementById('gridNotice').textContent = 'Could not load videos.';
+    grid.innerHTML = '<p class="rv-notice" style="grid-column:1/-1">Could not load videos.</p>';
   }
 }
 
 function renderVideoGrid(videos) {
   const grid = document.getElementById('videoGrid');
-  const notice = document.getElementById('gridNotice');
 
   if (!videos.length) {
-    notice.style.display = 'block';
-    notice.textContent = 'No videos yet.';
-    grid.innerHTML = '';
-    grid.appendChild(notice);
+    grid.innerHTML = `<p class="rv-empty">${isAdminSession ? 'No videos yet. Upload one to get started.' : 'No videos yet.'}</p>`;
     return;
   }
 
-  notice.style.display = 'none';
   grid.innerHTML = videos.map(v => `
-    <div class="rv-thumb" onclick="openVideo(${JSON.stringify(esc(v.stream_uid))}, ${JSON.stringify(esc(v.title))}, ${JSON.stringify(esc(v.description || ''))})">
+    <div class="rv-thumb"
+         data-uid="${esc(v.stream_uid)}"
+         data-title="${esc(v.title)}"
+         data-desc="${esc(v.description || '')}">
       <img class="rv-thumb-img"
            src="https://videodelivery.net/${esc(v.stream_uid)}/thumbnails/thumbnail.jpg?time=2s&width=640"
            alt="${esc(v.title)}"
@@ -545,21 +929,39 @@ function renderVideoGrid(videos) {
         <div class="rv-thumb-title">${esc(v.title)}</div>
         <div class="rv-thumb-meta">${new Date(v.created_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
         ${v.description ? `<div class="rv-thumb-desc">${esc(v.description)}</div>` : ''}
+        ${adminToken ? `<button class="rv-btn rv-btn-sm rv-btn-danger" style="margin-top:10px;width:100%" onclick="deleteSessionVideo(event,'${esc(v.stream_uid)}','${esc(v.title)}')">Delete</button>` : ''}
       </div>
     </div>
   `).join('');
+
+  grid.querySelectorAll('.rv-thumb').forEach(el => {
+    el.addEventListener('click', e => {
+      if (e.target.tagName === 'BUTTON') return;
+      openVideo(el.dataset.uid, el.dataset.title, el.dataset.desc);
+    });
+  });
 }
 
-function openVideoById(uid) {
-  // For deep links, fetch title from video list then open
-  fetch(`${WORKER_URL}/api/stream/videos`)
-    .then(r => r.json())
-    .then(videos => {
-      const v = videos.find(x => x.stream_uid === uid);
-      if (v) openVideo(v.stream_uid, v.title, v.description || '');
-      else openVideo(uid, 'Video', '');
-    })
-    .catch(() => openVideo(uid, 'Video', ''));
+async function deleteSessionVideo(e, uid, title) {
+  e.stopPropagation();
+  if (!confirm(`Delete "${title}"? This is permanent.`)) return;
+  const resp = await fetch(`${WORKER_URL}/api/stream/${encodeURIComponent(uid)}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  if (resp.ok) await loadSessionVideos();
+  else alert('Delete failed.');
+}
+
+function backFromSession() {
+  history.pushState(null, '', location.pathname);
+  if (adminToken) {
+    goToAdmin();
+  } else {
+    currentSession = null;
+    sessionPassword = null;
+    showPanel('Gate');
+  }
 }
 
 // ─── Player ───────────────────────────────────────────────────────────────────
@@ -574,24 +976,15 @@ function openVideo(uid, title, description) {
   document.getElementById('timecode').textContent = '0:00';
   document.getElementById('commentAt').textContent = 'At 0:00';
   document.getElementById('commentText').value = '';
-
-  document.getElementById('panelList').classList.remove('active');
-  document.getElementById('panelPlayer').classList.add('active');
-
-  history.pushState(null, '', `?v=${uid}`);
-
-  // Show admin delete button if logged in
   document.getElementById('adminVideoActions').style.display = adminToken ? 'block' : 'none';
 
   loadComments(uid);
+  showPanel('Player');
 }
 
-function backToList() {
-  document.getElementById('panelPlayer').classList.remove('active');
-  document.getElementById('panelList').classList.add('active');
+function backToSession() {
   document.getElementById('streamPlayer').src = '';
-  history.pushState(null, '', location.pathname);
-  loadVideoList();
+  showPanel('Session');
 }
 
 function addCommentAtTime() {
@@ -607,8 +1000,13 @@ async function deleteCurrentVideo() {
     headers: { Authorization: `Bearer ${adminToken}` },
   });
 
-  if (resp.ok) backToList();
-  else alert('Delete failed.');
+  if (resp.ok) {
+    document.getElementById('streamPlayer').src = '';
+    await loadSessionVideos();
+    showPanel('Session');
+  } else {
+    alert('Delete failed.');
+  }
 }
 
 // ─── Comments ─────────────────────────────────────────────────────────────────
@@ -641,7 +1039,6 @@ function renderComments() {
     </div>
   `).join('');
 
-  // Show delete buttons if admin
   if (adminToken) {
     list.querySelectorAll('.rv-comment-delete').forEach(b => b.style.display = 'block');
   }
@@ -667,10 +1064,11 @@ async function submitComment() {
   if (resp.ok) {
     document.getElementById('commentText').value = '';
     await loadComments(currentVideo.stream_uid);
-    // Scroll comment list to bottom
-    const list = document.getElementById('commentList');
-    const newComment = list.querySelector(`#comment-${(await resp.json()).id}`);
-    if (newComment) newComment.scrollIntoView({ behavior: 'smooth' });
+    const data = await resp.json().catch(() => ({}));
+    if (data.id) {
+      const el = document.getElementById(`comment-${data.id}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }
   }
 }
 
@@ -687,18 +1085,17 @@ async function deleteComment(e, id) {
 }
 
 function seekTo(seconds) {
-  // Seek the Stream iframe via postMessage
   document.getElementById('streamPlayer').contentWindow.postMessage(
-    { event: 'seek', seconds },
-    '*'
+    { event: 'seek', seconds }, '*'
   );
   currentTime = seconds;
   document.getElementById('timecode').textContent = formatTime(seconds);
   document.getElementById('commentAt').textContent = 'At ' + formatTime(seconds);
 }
 
-// ─── Stream Upload ────────────────────────────────────────────────────────────
+// ─── Upload Modal ─────────────────────────────────────────────────────────────
 function openUploadModal() {
+  if (!currentSession) return;
   document.getElementById('uploadModal').classList.add('open');
   document.getElementById('modalErr').style.display = 'none';
   document.getElementById('modalProgress').style.display = 'none';
@@ -714,50 +1111,41 @@ function closeUploadModal() {
 async function doStreamUpload() {
   const title = document.getElementById('upTitle').value.trim();
   const description = document.getElementById('upDescription').value.trim();
-  const fileInput = document.getElementById('upVideoFile');
-  const file = fileInput.files[0];
+  const file = document.getElementById('upVideoFile').files[0];
   const errEl = document.getElementById('modalErr');
   const btn = document.getElementById('modalUploadBtn');
 
   errEl.style.display = 'none';
-  if (!title) { showModalErr('Enter a title.'); return; }
-  if (!file) { showModalErr('Choose a video file.'); return; }
+  if (!title) { showErr(errEl, 'Enter a title.'); return; }
+  if (!file) { showErr(errEl, 'Choose a video file.'); return; }
 
   btn.disabled = true;
   btn.textContent = 'Starting…';
 
   try {
-    // Step 1: Get a direct upload URL from Stream via Worker
     const resp = await fetch(`${WORKER_URL}/api/stream/upload`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${adminToken}`,
-      },
-      body: JSON.stringify({ title, description }),
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({ title, description, review_id: currentSession.id }),
     });
 
     if (!resp.ok) {
       const d = await resp.json();
-      showModalErr(d.error || 'Could not start upload.');
+      showErr(errEl, d.error || 'Could not start upload.');
       return;
     }
 
     const { uploadUrl } = await resp.json();
-
-    // Step 2: POST file directly to Stream's direct_upload URL (CORS-friendly, no TUS)
     const progressWrap = document.getElementById('modalProgress');
     const bar = document.getElementById('modalBar');
     const label = document.getElementById('modalLabel');
     progressWrap.style.display = 'block';
     btn.textContent = 'Uploading…';
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     await new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open('POST', uploadUrl);
+      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) {
           const pct = Math.round((e.loaded / e.total) * 100);
@@ -769,84 +1157,30 @@ async function doStreamUpload() {
         ? resolve()
         : reject(new Error(`Upload returned HTTP ${xhr.status}`));
       xhr.onerror = () => reject(new Error('Network error during upload'));
-      xhr.send(formData);
+      xhr.send(file);
     });
 
     label.textContent = 'Upload complete — processing may take a few minutes.';
     btn.textContent = 'Done';
-    setTimeout(() => {
+    setTimeout(async () => {
       closeUploadModal();
-      loadVideoList();
+      await loadSessionVideos();
     }, 2000);
 
   } catch (err) {
-    showModalErr('Upload failed: ' + err.message);
+    showErr(errEl, 'Upload failed: ' + err.message);
   } finally {
     btn.disabled = false;
     if (btn.textContent !== 'Done') btn.textContent = 'Upload';
   }
 }
 
-function showModalErr(msg) {
-  const el = document.getElementById('modalErr');
+// ─── Utilities ────────────────────────────────────────────────────────────────
+function showErr(el, msg) {
   el.textContent = msg;
   el.style.display = 'block';
 }
 
-// ─── Admin Auth ───────────────────────────────────────────────────────────────
-function openAdminAuth() {
-  document.getElementById('adminAuthBg').classList.add('open');
-  document.getElementById('authPass').value = '';
-  document.getElementById('authErr').style.display = 'none';
-  setTimeout(() => document.getElementById('authPass').focus(), 100);
-}
-function closeAdminAuth() {
-  document.getElementById('adminAuthBg').classList.remove('open');
-}
-
-async function authLogin() {
-  const pass = document.getElementById('authPass').value;
-  const errEl = document.getElementById('authErr');
-  errEl.style.display = 'none';
-
-  const resp = await fetch(`${WORKER_URL}/api/transfers`, {
-    headers: { Authorization: `Bearer ${pass}` },
-  });
-
-  if (!resp.ok) {
-    errEl.textContent = 'Incorrect password.';
-    errEl.style.display = 'block';
-    return;
-  }
-
-  adminToken = pass;
-  closeAdminAuth();
-
-  // Update header to show admin controls
-  document.getElementById('headerActions').innerHTML = `
-    <button class="rv-btn rv-btn-sm" onclick="openUploadModal()">+ Upload Video</button>
-    <button class="rv-btn rv-btn-ghost rv-btn-sm" onclick="adminLogout()">Sign out</button>
-  `;
-
-  // Re-render comments with delete buttons if on player panel
-  if (currentVideo) {
-    renderComments();
-    document.getElementById('adminVideoActions').style.display = 'block';
-  }
-}
-
-function adminLogout() {
-  adminToken = null;
-  document.getElementById('headerActions').innerHTML = `
-    <button class="rv-btn rv-btn-ghost rv-btn-sm" onclick="openAdminAuth()">Admin</button>
-  `;
-  if (currentVideo) {
-    renderComments();
-    document.getElementById('adminVideoActions').style.display = 'none';
-  }
-}
-
-// ─── Utilities ────────────────────────────────────────────────────────────────
 function formatTime(secs) {
   const s = Math.floor(secs);
   const m = Math.floor(s / 60);

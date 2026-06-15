@@ -8,10 +8,18 @@ CREATE TABLE IF NOT EXISTS transfers (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS reviews (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS videos (
   stream_uid TEXT PRIMARY KEY,
   title TEXT NOT NULL,
   description TEXT,
+  review_id TEXT REFERENCES reviews(id),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
