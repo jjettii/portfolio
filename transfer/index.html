@@ -353,13 +353,13 @@
              ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
           <div class="ft-dropzone-icon">↑</div>
           <div class="ft-dropzone-label">
-            <strong>Click to choose a file</strong><br>or drag and drop here
+            <strong>Click to choose a file</strong><br>or drag &amp; drop files or a folder
           </div>
           <div class="ft-dropzone-filename" id="chosenFile"></div>
         </div>
 
         <div class="ft-field">
-          <label class="ft-label" for="upDesc">Description (optional)</label>
+          <label class="ft-label" for="upDesc">Transfer Name</label>
           <input class="ft-input" type="text" id="upDesc" placeholder="e.g. Rough cut v2 for review">
         </div>
         <div class="ft-field">
@@ -413,14 +413,15 @@
 
 <script>
 // ─── Config ──────────────────────────────────────────────────────────────────
-// Replace this with your deployed Worker URL after running `wrangler deploy`
 const WORKER_URL = 'https://portfolio-worker.jordanettinger.workers.dev';
 
 // ─── State ───────────────────────────────────────────────────────────────────
 let adminToken = null;
 let currentTransferId = null;
 let currentPassword = null;
-let chosenFile = null;
+let currentIsMulti = false;
+let chosenFiles = [];       // [{file: File, path: string}]
+let chosenFolderName = null;
 
 // ─── Init ────────────────────────────────────────────────────────────────────
 (function init() {
@@ -449,16 +450,23 @@ async function lookupTransfer() {
     const resp = await fetch(`${WORKER_URL}/api/transfer/${encodeURIComponent(id)}?password=${encodeURIComponent(pass)}`);
     const data = await resp.json();
 
-    if (!resp.ok) {
-      showErr(errEl, data.error || 'Something went wrong.');
-      return;
-    }
+    if (!resp.ok) { showErr(errEl, data.error || 'Something went wrong.'); return; }
 
     currentTransferId = id;
     currentPassword = pass;
+    currentIsMulti = data.is_multi || false;
 
     document.getElementById('dlFilename').textContent = data.filename;
-    document.getElementById('dlSize').textContent = data.filesize ? formatBytes(data.filesize) : '';
+
+    let sizeText = '';
+    if (currentIsMulti && data.file_count) {
+      sizeText = `${data.file_count} file${data.file_count > 1 ? 's' : ''}`;
+      if (data.filesize) sizeText += ` · ${formatBytes(data.filesize)}`;
+    } else if (data.filesize) {
+      sizeText = formatBytes(data.filesize);
+    }
+    document.getElementById('dlSize').textContent = sizeText;
+
     document.getElementById('dlDate').textContent = data.created_at
       ? 'Uploaded ' + new Date(data.created_at).toLocaleDateString('en-CA', { month: 'long', day: 'numeric', year: 'numeric' })
       : '';
@@ -466,6 +474,7 @@ async function lookupTransfer() {
     descEl.textContent = data.description || '';
     descEl.style.display = data.description ? 'block' : 'none';
 
+    document.getElementById('dlBtn').textContent = currentIsMulti ? 'Download ZIP' : 'Download';
     document.getElementById('dlForm').style.display = 'none';
     document.getElementById('dlInfo').style.display = 'block';
 
@@ -480,9 +489,16 @@ async function lookupTransfer() {
 async function downloadFile() {
   const btn = document.getElementById('dlBtn');
   btn.disabled = true;
-  btn.textContent = 'Generating link…';
+  btn.textContent = currentIsMulti ? 'Preparing ZIP…' : 'Generating link…';
 
   try {
+    if (currentIsMulti) {
+      // Worker streams the ZIP directly — open it as a navigation so the browser downloads it
+      const url = `${WORKER_URL}/api/transfer/${encodeURIComponent(currentTransferId)}/download?password=${encodeURIComponent(currentPassword)}`;
+      window.location.href = url;
+      return;
+    }
+
     const resp = await fetch(
       `${WORKER_URL}/api/transfer/${encodeURIComponent(currentTransferId)}/download?password=${encodeURIComponent(currentPassword)}`
     );
@@ -499,7 +515,7 @@ async function downloadFile() {
     alert('Network error. Please try again.');
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Download';
+    btn.textContent = currentIsMulti ? 'Download ZIP' : 'Download';
   }
 }
 
@@ -557,21 +573,31 @@ function renderTransferList(items) {
     return;
   }
   notice.style.display = 'none';
-  el.innerHTML = items.map(t => `
+  el.innerHTML = items.map(t => {
+    const isMulti = t.file_count > 0;
+    let meta = '';
+    if (isMulti) {
+      meta += `${t.file_count} file${t.file_count > 1 ? 's' : ''}`;
+      if (t.total_size) meta += ` · ${formatBytes(t.total_size)}`;
+    } else if (t.filesize) {
+      meta += formatBytes(t.filesize);
+    }
+    if (meta) meta += ' · ';
+    meta += new Date(t.created_at).toLocaleDateString('en-CA');
+    if (t.description) meta += ' · ' + esc(t.description);
+    return `
     <div class="ft-list-item">
       <div class="ft-list-info">
         <div class="ft-list-name">${esc(t.filename)}</div>
-        <div class="ft-list-meta">${t.filesize ? formatBytes(t.filesize) + ' · ' : ''}${
-          new Date(t.created_at).toLocaleDateString('en-CA')
-        }${t.description ? ' · ' + esc(t.description) : ''}</div>
+        <div class="ft-list-meta">${meta}</div>
       </div>
       <button class="ft-delete-btn" onclick="deleteTransfer('${esc(t.id)}')">Delete</button>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 async function deleteTransfer(id) {
-  if (!confirm('Delete this transfer? The file will be permanently removed.')) return;
+  if (!confirm('Delete this transfer? All files will be permanently removed.')) return;
   const resp = await fetch(`${WORKER_URL}/api/transfer/${encodeURIComponent(id)}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${adminToken}` },
@@ -585,23 +611,43 @@ function showUploadForm() {
   document.getElementById('uploadForm').style.display = 'block';
   document.getElementById('shareResult').style.display = 'none';
 }
+
 function hideUploadForm() {
   document.getElementById('uploadForm').style.display = 'none';
-  chosenFile = null;
+  chosenFiles = [];
+  chosenFolderName = null;
   document.getElementById('chosenFile').textContent = '';
+  document.getElementById('fileInput').value = '';
   document.getElementById('upDesc').value = '';
   document.getElementById('upPass').value = '';
   document.getElementById('uploadProgress').style.display = 'none';
   document.getElementById('uploadBar').style.width = '0%';
   document.getElementById('uploadError').style.display = 'none';
 }
+
 function hideShareResult() {
   document.getElementById('shareResult').style.display = 'none';
 }
 
+function updateDropzoneDisplay() {
+  const el = document.getElementById('chosenFile');
+  if (!chosenFiles.length) { el.textContent = ''; return; }
+  const totalSize = chosenFiles.reduce((s, f) => s + f.file.size, 0);
+  if (chosenFolderName) {
+    el.textContent = `${chosenFolderName}  —  ${chosenFiles.length} file${chosenFiles.length !== 1 ? 's' : ''}  ·  ${formatBytes(totalSize)}`;
+  } else if (chosenFiles.length === 1) {
+    el.textContent = chosenFiles[0].file.name;
+  } else {
+    el.textContent = `${chosenFiles.length} files  ·  ${formatBytes(totalSize)}`;
+  }
+}
+
 function onFileChosen(input) {
-  chosenFile = input.files[0] || null;
-  document.getElementById('chosenFile').textContent = chosenFile ? chosenFile.name : '';
+  const f = input.files[0];
+  if (!f) return;
+  chosenFiles = [{ file: f, path: f.name }];
+  chosenFolderName = null;
+  updateDropzoneDisplay();
 }
 
 function onDragOver(e) {
@@ -615,8 +661,68 @@ function onDragLeave(e) {
 function onDrop(e) {
   e.preventDefault();
   document.getElementById('dropzone').classList.remove('drag-over');
-  chosenFile = e.dataTransfer.files[0] || null;
-  document.getElementById('chosenFile').textContent = chosenFile ? chosenFile.name : '';
+  const items = [...e.dataTransfer.items];
+  collectFilesFromItems(items).then(({ files, folderName }) => {
+    chosenFiles = files;
+    chosenFolderName = folderName;
+    updateDropzoneDisplay();
+  });
+}
+
+async function collectFilesFromItems(items) {
+  const entries = items
+    .filter(i => i.kind === 'file')
+    .map(i => i.webkitGetAsEntry())
+    .filter(Boolean);
+
+  if (entries.length === 1 && entries[0].isDirectory) {
+    const dir = entries[0];
+    const files = [];
+    await traverseDir(dir, dir.name, files);
+    return { files, folderName: dir.name };
+  }
+
+  const files = [];
+  for (const entry of entries) {
+    if (entry.isFile) {
+      const f = await entryToFile(entry);
+      files.push({ file: f, path: f.name });
+    } else if (entry.isDirectory) {
+      await traverseDir(entry, entry.name, files);
+    }
+  }
+  return { files, folderName: null };
+}
+
+async function traverseDir(dirEntry, basePath, files) {
+  const entries = await readAllDirEntries(dirEntry.createReader());
+  for (const entry of entries) {
+    const entryPath = basePath + '/' + entry.name;
+    if (entry.isFile) {
+      const f = await entryToFile(entry);
+      files.push({ file: f, path: entryPath });
+    } else if (entry.isDirectory) {
+      await traverseDir(entry, entryPath, files);
+    }
+  }
+}
+
+function entryToFile(entry) {
+  return new Promise((resolve, reject) => entry.file(resolve, reject));
+}
+
+function readAllDirEntries(reader) {
+  return new Promise((resolve, reject) => {
+    const all = [];
+    function read() {
+      reader.readEntries(batch => {
+        if (!batch.length) return resolve(all);
+        all.push(...batch);
+        read();
+      }, reject);
+    }
+    read();
+  });
 }
 
 async function doUpload() {
@@ -626,52 +732,28 @@ async function doUpload() {
   const btn = document.getElementById('uploadBtn');
 
   errEl.style.display = 'none';
-  if (!chosenFile) { showErr(errEl, 'Choose a file first.'); return; }
+  if (!chosenFiles.length) { showErr(errEl, 'Choose a file or folder first.'); return; }
+  if (!desc) { showErr(errEl, 'Enter a transfer name.'); return; }
   if (!pass) { showErr(errEl, 'Enter a download password.'); return; }
 
   btn.disabled = true;
   btn.textContent = 'Uploading…';
 
+  const progressWrap = document.getElementById('uploadProgress');
+  const bar = document.getElementById('uploadBar');
+  const label = document.getElementById('uploadLabel');
+  progressWrap.style.display = 'block';
+
   try {
-    // Step 1: Create transfer record and get presigned upload URL
-    const createResp = await fetch(`${WORKER_URL}/api/transfer/create`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${adminToken}`,
-      },
-      body: JSON.stringify({
-        filename: chosenFile.name,
-        filesize: chosenFile.size,
-        description: desc || null,
-        password: pass,
-      }),
-    });
+    const isMulti = chosenFiles.length > 1 || chosenFolderName !== null;
+    const id = isMulti
+      ? await doMultiUpload(pass, desc, bar, label)
+      : await doSingleUpload(pass, desc, bar, label, errEl);
 
-    if (!createResp.ok) {
-      const d = await createResp.json();
-      showErr(errEl, d.error || 'Could not create transfer.');
-      return;
-    }
-
-    const { id, uploadUrl } = await createResp.json();
-
-    // Step 2: Upload file directly to R2 via presigned URL
-    const progressWrap = document.getElementById('uploadProgress');
-    const bar = document.getElementById('uploadBar');
-    const label = document.getElementById('uploadLabel');
-    progressWrap.style.display = 'block';
-
-    await uploadWithProgress(uploadUrl, chosenFile, (pct) => {
-      bar.style.width = pct + '%';
-      label.textContent = `Uploading… ${pct}%`;
-    });
+    if (!id) return;
 
     label.textContent = 'Upload complete.';
-
-    // Show shareable link
     const shareUrl = `${location.origin}/transfer/?id=${id}`;
-    document.getElementById('shareUrl').value = shareUrl;
     document.getElementById('uploadForm').style.display = 'none';
     document.getElementById('shareResult').style.display = 'block';
     hideUploadForm();
@@ -679,13 +761,80 @@ async function doUpload() {
     document.getElementById('shareUrl').value = shareUrl;
 
     await refreshList();
-
   } catch (err) {
     showErr(errEl, 'Upload failed: ' + err.message);
   } finally {
     btn.disabled = false;
     btn.textContent = 'Upload';
   }
+}
+
+async function doSingleUpload(pass, desc, bar, label, errEl) {
+  const { file } = chosenFiles[0];
+
+  const createResp = await fetch(`${WORKER_URL}/api/transfer/create`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+    body: JSON.stringify({ filename: file.name, filesize: file.size, description: desc, password: pass }),
+  });
+
+  if (!createResp.ok) {
+    const d = await createResp.json();
+    showErr(errEl, d.error || 'Could not create transfer.');
+    return null;
+  }
+
+  const { id, uploadUrl } = await createResp.json();
+
+  await uploadWithProgress(uploadUrl, file, (pct) => {
+    bar.style.width = pct + '%';
+    label.textContent = `Uploading… ${pct}%`;
+  });
+
+  return id;
+}
+
+async function doMultiUpload(pass, desc, bar, label) {
+  const createResp = await fetch(`${WORKER_URL}/api/transfer/create-multi`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+    body: JSON.stringify({ name: desc, password: pass }),
+  });
+
+  if (!createResp.ok) {
+    const d = await createResp.json();
+    throw new Error(d.error || 'Could not create transfer.');
+  }
+
+  const { id } = await createResp.json();
+
+  for (let i = 0; i < chosenFiles.length; i++) {
+    const { file, path } = chosenFiles[i];
+
+    label.textContent = `Uploading ${i + 1} of ${chosenFiles.length}: ${file.name}`;
+    bar.style.width = Math.round((i / chosenFiles.length) * 100) + '%';
+
+    const addResp = await fetch(`${WORKER_URL}/api/transfer/${id}/add-file`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({ filename: path, filesize: file.size, sort_order: i }),
+    });
+
+    if (!addResp.ok) {
+      const d = await addResp.json();
+      throw new Error(d.error || `Failed to register: ${path}`);
+    }
+
+    const { uploadUrl } = await addResp.json();
+
+    await uploadWithProgress(uploadUrl, file, (pct) => {
+      const overall = Math.round(((i + pct / 100) / chosenFiles.length) * 100);
+      bar.style.width = overall + '%';
+    });
+  }
+
+  bar.style.width = '100%';
+  return id;
 }
 
 function uploadWithProgress(url, file, onProgress) {
@@ -712,13 +861,12 @@ function copyShareUrl() {
 }
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
-function showErr(el, msg) {
-  el.textContent = msg;
-  el.style.display = 'block';
-}
+function showErr(el, msg) { el.textContent = msg; el.style.display = 'block'; }
+
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
 function formatBytes(bytes) {
   if (!bytes) return '';
   const gb = bytes / 1e9;

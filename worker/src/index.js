@@ -1,5 +1,143 @@
 import { AwsClient } from 'aws4fetch';
 
+// ─── ZIP helpers ─────────────────────────────────────────────────────────────
+
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let j = 0; j < 8; j++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[i] = c;
+  }
+  return t;
+})();
+
+function zipLocalHeader(nameBytes, dosTime, dosDate) {
+  const buf = new Uint8Array(30 + nameBytes.length);
+  const v = new DataView(buf.buffer);
+  v.setUint32(0, 0x04034B50, true);
+  v.setUint16(4, 20, true);
+  v.setUint16(6, 0x0008, true);   // bit 3: data descriptor follows
+  v.setUint16(8, 0, true);        // STORE (no compression)
+  v.setUint16(10, dosTime, true);
+  v.setUint16(12, dosDate, true);
+  // CRC32, compressed size, uncompressed size all 0 — filled by data descriptor
+  v.setUint16(26, nameBytes.length, true);
+  buf.set(nameBytes, 30);
+  return buf;
+}
+
+function zipDataDescriptor(crc, size) {
+  const buf = new Uint8Array(16);
+  const v = new DataView(buf.buffer);
+  v.setUint32(0, 0x08074B50, true);
+  v.setUint32(4, crc, true);
+  v.setUint32(8, size, true);
+  v.setUint32(12, size, true);
+  return buf;
+}
+
+function zipCentralEntry(nameBytes, dosTime, dosDate, crc, size, localOffset) {
+  const buf = new Uint8Array(46 + nameBytes.length);
+  const v = new DataView(buf.buffer);
+  v.setUint32(0, 0x02014B50, true);
+  v.setUint16(4, 20, true);
+  v.setUint16(6, 20, true);
+  v.setUint16(8, 0x0008, true);
+  v.setUint16(10, 0, true);
+  v.setUint16(12, dosTime, true);
+  v.setUint16(14, dosDate, true);
+  v.setUint32(16, crc, true);
+  v.setUint32(20, size, true);
+  v.setUint32(24, size, true);
+  v.setUint16(28, nameBytes.length, true);
+  v.setUint32(42, localOffset, true);
+  buf.set(nameBytes, 46);
+  return buf;
+}
+
+function zipEndRecord(count, cdSize, cdOffset) {
+  const buf = new Uint8Array(22);
+  const v = new DataView(buf.buffer);
+  v.setUint32(0, 0x06054B50, true);
+  v.setUint16(8, count, true);
+  v.setUint16(10, count, true);
+  v.setUint32(12, cdSize, true);
+  v.setUint32(16, cdOffset, true);
+  return buf;
+}
+
+async function streamZipDownload(env, files, zipName) {
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
+  const enc = new TextEncoder();
+  const now = new Date();
+  const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | Math.floor(now.getSeconds() / 2);
+  const dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+
+  (async () => {
+    try {
+      const central = [];
+      let offset = 0;
+
+      for (const f of files) {
+        const nameBytes = enc.encode(f.filename);
+        const localOffset = offset;
+        const header = zipLocalHeader(nameBytes, dosTime, dosDate);
+        await writer.write(header);
+        offset += header.length;
+
+        const obj = await env.BUCKET.get(f.r2_key);
+        let crc = 0xFFFFFFFF;
+        let size = 0;
+
+        if (obj) {
+          const reader = obj.body.getReader();
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            for (let i = 0; i < value.length; i++) {
+              crc = (crc >>> 8) ^ CRC_TABLE[(crc ^ value[i]) & 0xFF];
+            }
+            size += value.length;
+            await writer.write(value);
+            offset += value.length;
+          }
+        }
+        crc = (crc ^ 0xFFFFFFFF) >>> 0;
+
+        const desc = zipDataDescriptor(crc, size);
+        await writer.write(desc);
+        offset += desc.length;
+
+        central.push({ nameBytes, dosTime, dosDate, crc, size, localOffset });
+      }
+
+      const cdOffset = offset;
+      for (const e of central) {
+        const entry = zipCentralEntry(e.nameBytes, e.dosTime, e.dosDate, e.crc, e.size, e.localOffset);
+        await writer.write(entry);
+        offset += entry.length;
+      }
+
+      await writer.write(zipEndRecord(central.length, offset - cdOffset, cdOffset));
+      await writer.close();
+    } catch (err) {
+      console.error('ZIP stream error:', err);
+      await writer.abort(err);
+    }
+  })();
+
+  const safeName = zipName.replace(/[^\w\s.-]/g, '_');
+  return new Response(readable, {
+    headers: {
+      'Content-Type': 'application/zip',
+      'Content-Disposition': `attachment; filename="${safeName}.zip"`,
+      ...CORS,
+    },
+  });
+}
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const CORS = {
@@ -90,7 +228,7 @@ async function handleTransferInfo(request, env, id) {
   const password = url.searchParams.get('password') || '';
 
   const row = await env.DB.prepare(
-    `SELECT id, filename, filesize, description, created_at, password_hash FROM transfers WHERE id = ?`
+    `SELECT id, filename, filesize, total_size, description, created_at, password_hash FROM transfers WHERE id = ?`
   ).bind(id).first();
 
   if (!row) return json({ error: 'Transfer not found' }, 404);
@@ -98,12 +236,21 @@ async function handleTransferInfo(request, env, id) {
   const hash = await hashPassword(password, env);
   if (hash !== row.password_hash) return json({ error: 'Invalid password' }, 403);
 
+  const { results: files } = await env.DB.prepare(
+    `SELECT COUNT(*) AS cnt FROM transfer_files WHERE transfer_id = ?`
+  ).bind(id).all();
+
+  const fileCount = files[0]?.cnt || 0;
+  const isMulti = fileCount > 0;
+
   return json({
     id: row.id,
     filename: row.filename,
-    filesize: row.filesize,
+    filesize: isMulti ? row.total_size : row.filesize,
     description: row.description,
     created_at: row.created_at,
+    is_multi: isMulti,
+    file_count: isMulti ? fileCount : null,
   });
 }
 
@@ -120,8 +267,15 @@ async function handleTransferDownload(request, env, id) {
   const hash = await hashPassword(password, env);
   if (hash !== row.password_hash) return json({ error: 'Invalid password' }, 403);
 
-  const downloadUrl = await getPresignedUrl(env, row.r2_key, 'GET', DOWNLOAD_EXPIRY);
+  const { results: files } = await env.DB.prepare(
+    `SELECT filename, r2_key FROM transfer_files WHERE transfer_id = ? ORDER BY sort_order ASC`
+  ).bind(id).all();
 
+  if (files.length > 0) {
+    return streamZipDownload(env, files, row.filename);
+  }
+
+  const downloadUrl = await getPresignedUrl(env, row.r2_key, 'GET', DOWNLOAD_EXPIRY);
   return json({ downloadUrl, filename: row.filename });
 }
 
@@ -130,8 +284,12 @@ async function handleTransferList(request, env) {
   if (denied) return denied;
 
   const { results } = await env.DB.prepare(
-    `SELECT id, filename, filesize, description, created_at
-     FROM transfers ORDER BY created_at DESC`
+    `SELECT t.id, t.filename, t.filesize, t.total_size, t.description, t.created_at,
+            COUNT(tf.id) AS file_count
+     FROM transfers t
+     LEFT JOIN transfer_files tf ON tf.transfer_id = t.id
+     GROUP BY t.id
+     ORDER BY t.created_at DESC`
   ).all();
 
   return json(results);
@@ -144,10 +302,68 @@ async function handleTransferDelete(request, env, id) {
   const row = await env.DB.prepare(`SELECT r2_key FROM transfers WHERE id = ?`).bind(id).first();
   if (!row) return json({ error: 'Transfer not found' }, 404);
 
-  await env.BUCKET.delete(row.r2_key);
+  const { results: files } = await env.DB.prepare(
+    `SELECT r2_key FROM transfer_files WHERE transfer_id = ?`
+  ).bind(id).all();
+
+  for (const f of files) await env.BUCKET.delete(f.r2_key);
+  await env.DB.prepare(`DELETE FROM transfer_files WHERE transfer_id = ?`).bind(id).run();
+
+  if (row.r2_key) await env.BUCKET.delete(row.r2_key);
   await env.DB.prepare(`DELETE FROM transfers WHERE id = ?`).bind(id).run();
 
   return json({ ok: true });
+}
+
+async function handleTransferCreateMulti(request, env) {
+  const denied = requireAdmin(request, env);
+  if (denied) return denied;
+
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
+
+  const { name, description, password } = body;
+  if (!name || !password) return json({ error: 'name and password are required' }, 400);
+
+  const id = crypto.randomUUID();
+  const passwordHash = await hashPassword(password, env);
+
+  // r2_key = '' signals a multi-file transfer; files stored in transfer_files
+  await env.DB.prepare(
+    `INSERT INTO transfers (id, filename, filesize, r2_key, password_hash, description)
+     VALUES (?, ?, NULL, '', ?, ?)`
+  ).bind(id, name, passwordHash, description || null).run();
+
+  return json({ id });
+}
+
+async function handleTransferAddFile(request, env, id) {
+  const denied = requireAdmin(request, env);
+  if (denied) return denied;
+
+  const transfer = await env.DB.prepare(`SELECT id FROM transfers WHERE id = ?`).bind(id).first();
+  if (!transfer) return json({ error: 'Transfer not found' }, 404);
+
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
+
+  const { filename, filesize, sort_order } = body;
+  if (!filename) return json({ error: 'filename required' }, 400);
+
+  const r2Key = `transfers/${id}/${filename}`;
+
+  await env.DB.prepare(
+    `INSERT INTO transfer_files (transfer_id, filename, r2_key, filesize, sort_order)
+     VALUES (?, ?, ?, ?, ?)`
+  ).bind(id, filename, r2Key, filesize || null, sort_order ?? 0).run();
+
+  await env.DB.prepare(
+    `UPDATE transfers SET total_size = COALESCE(total_size, 0) + ? WHERE id = ?`
+  ).bind(filesize || 0, id).run();
+
+  const uploadUrl = await getPresignedUrl(env, r2Key, 'PUT', UPLOAD_EXPIRY);
+
+  return json({ uploadUrl });
 }
 
 // ─── Review Handlers ─────────────────────────────────────────────────────────
@@ -340,6 +556,23 @@ async function handleStreamVideoList(request, env) {
   return json(results);
 }
 
+async function handleStreamVideoUpdate(request, env, streamUid) {
+  const denied = requireAdmin(request, env);
+  if (denied) return denied;
+
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
+
+  const { title, description } = body;
+  if (!title) return json({ error: 'title is required' }, 400);
+
+  await env.DB.prepare(
+    `UPDATE videos SET title = ?, description = ? WHERE stream_uid = ?`
+  ).bind(title.trim(), description?.trim() || null, streamUid).run();
+
+  return json({ ok: true });
+}
+
 async function handleStreamVideoDelete(request, env, streamUid) {
   const denied = requireAdmin(request, env);
   if (denied) return denied;
@@ -414,6 +647,9 @@ export default {
       if (pathname === '/api/transfer/create' && method === 'POST') {
         return handleTransferCreate(request, env);
       }
+      if (pathname === '/api/transfer/create-multi' && method === 'POST') {
+        return handleTransferCreateMulti(request, env);
+      }
       if (pathname === '/api/transfers' && method === 'GET') {
         return handleTransferList(request, env);
       }
@@ -427,6 +663,11 @@ export default {
             : handleTransferInfo(request, env, id);
         }
         if (method === 'DELETE') return handleTransferDelete(request, env, id);
+      }
+
+      const xferFileMatch = pathname.match(/^\/api\/transfer\/([^/]+)\/add-file$/);
+      if (xferFileMatch && method === 'POST') {
+        return handleTransferAddFile(request, env, xferFileMatch[1]);
       }
 
       // ── Reviews ──
@@ -458,8 +699,9 @@ export default {
       }
 
       const streamMatch = pathname.match(/^\/api\/stream\/([^/]+)$/);
-      if (streamMatch && method === 'DELETE') {
-        return handleStreamVideoDelete(request, env, streamMatch[1]);
+      if (streamMatch) {
+        if (method === 'PATCH') return handleStreamVideoUpdate(request, env, streamMatch[1]);
+        if (method === 'DELETE') return handleStreamVideoDelete(request, env, streamMatch[1]);
       }
 
       // ── Comments ──

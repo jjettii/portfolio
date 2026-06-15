@@ -4,9 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
-  <title>Video Review — Jordan Ettinger</title>
+  <title>Video Projects — Jordan Ettinger</title>
   <link rel="icon" type="image/png" href="../assets/favicon/favicon-96x96.png" sizes="96x96">
   <link rel="stylesheet" href="../assets/css/style.css">
+  <script src="https://embed.cloudflarestream.com/embed/sdk.latest.js"></script>
   <style>
     body { background: #fff; }
 
@@ -117,8 +118,9 @@
     }
     .rv-session-nav {
       display: flex;
-      align-items: center;
-      gap: 16px;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
       margin-bottom: 32px;
     }
     .rv-session-title {
@@ -439,11 +441,11 @@
 <!-- ═══ GATE PANEL ══════════════════════════════════════════════════════════ -->
 <div class="rv-panel active" id="panelGate">
   <div class="rv-gate-wrap">
-    <h1 class="rv-gate-heading">Video Review</h1>
-    <p class="rv-gate-sub">Enter your review ID and password to access your videos.</p>
+    <h1 class="rv-gate-heading">Video Projects</h1>
+    <p class="rv-gate-sub">Enter your project ID and password to access your videos.</p>
 
     <div class="rv-field">
-      <label class="rv-label" for="gateId">Review ID</label>
+      <label class="rv-label" for="gateId">Project ID</label>
       <input class="rv-input" type="text" id="gateId" placeholder="e.g. 3f2a7b1c-…"
              autocomplete="off" spellcheck="false">
     </div>
@@ -453,7 +455,7 @@
              autocomplete="off" onkeydown="if(event.key==='Enter')accessReview()">
       <div class="rv-error" id="gateError"></div>
     </div>
-    <button class="rv-btn" id="gateBtn" onclick="accessReview()" style="width:100%">Access Review</button>
+    <button class="rv-btn" id="gateBtn" onclick="accessReview()" style="width:100%">Access Project</button>
   </div>
 </div>
 
@@ -461,8 +463,8 @@
 <div class="rv-panel" id="panelAdmin">
   <div class="rv-admin-wrap">
     <div class="rv-admin-head">
-      <h1 class="rv-admin-heading">Reviews</h1>
-      <button class="rv-btn rv-btn-sm" onclick="openNewReviewModal()">+ New Review</button>
+      <h1 class="rv-admin-heading">Projects</h1>
+      <button class="rv-btn rv-btn-sm" onclick="openNewReviewModal()">+ New Project</button>
     </div>
     <div class="rv-review-list" id="reviewList">
       <p class="rv-notice">Loading…</p>
@@ -474,7 +476,7 @@
 <div class="rv-panel" id="panelSession">
   <div class="rv-session-wrap">
     <div class="rv-session-nav">
-      <button class="rv-back-btn" id="sessionBackBtn" onclick="backFromSession()">← All Reviews</button>
+      <button class="rv-back-btn" id="sessionBackBtn" onclick="backFromSession()">← All Projects</button>
       <h1 class="rv-session-title" id="sessionTitle"></h1>
     </div>
     <div class="rv-grid" id="videoGrid">
@@ -491,7 +493,8 @@
       <div class="rv-player-top">
         <button class="rv-back-btn" onclick="backToSession()">← All videos</button>
         <div class="rv-player-title" id="playerTitle"></div>
-        <div id="adminVideoActions" style="display:none">
+        <div id="adminVideoActions" style="display:none; gap:8px;">
+          <button class="rv-btn rv-btn-sm rv-btn-ghost" onclick="openEditVideoModal()">Edit</button>
           <button class="rv-btn rv-btn-sm rv-btn-danger" onclick="deleteCurrentVideo()">Delete video</button>
         </div>
       </div>
@@ -503,9 +506,6 @@
 
       <div class="rv-player-controls">
         <span class="rv-timecode" id="timecode">0:00</span>
-        <button class="rv-btn rv-btn-ghost rv-btn-sm" onclick="addCommentAtTime()">
-          + Comment at this time
-        </button>
       </div>
     </div>
 
@@ -532,7 +532,7 @@
   <div class="rv-modal">
     <h2 id="reviewModalTitle">New Review</h2>
     <div class="rv-field">
-      <label class="rv-label" for="reviewName">Review Name</label>
+      <label class="rv-label" for="reviewName">Project Name</label>
       <input class="rv-input" type="text" id="reviewName" placeholder="e.g. Havn Saunas — Round 1"
              onkeydown="if(event.key==='Enter')saveReview()">
     </div>
@@ -583,6 +583,27 @@
   </div>
 </div>
 
+<!-- ═══ EDIT VIDEO MODAL ════════════════════════════════════════════════════ -->
+<div class="rv-modal-bg" id="editVideoModal">
+  <div class="rv-modal">
+    <h2>Edit Video</h2>
+    <div class="rv-field">
+      <label class="rv-label" for="editVideoTitle">Title</label>
+      <input class="rv-input" type="text" id="editVideoTitle"
+             onkeydown="if(event.key==='Enter')saveVideoEdit()">
+    </div>
+    <div class="rv-field">
+      <label class="rv-label" for="editVideoDesc">Description (optional)</label>
+      <input class="rv-input" type="text" id="editVideoDesc" placeholder="Notes for the client">
+    </div>
+    <div class="rv-error" id="editVideoErr"></div>
+    <div class="rv-modal-actions">
+      <button class="rv-btn" id="editVideoSaveBtn" onclick="saveVideoEdit()">Save</button>
+      <button class="rv-btn rv-btn-ghost" onclick="closeEditVideoModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ ADMIN AUTH OVERLAY ══════════════════════════════════════════════════ -->
 <div class="rv-auth-bg" id="adminAuthBg">
   <div class="rv-auth-box">
@@ -611,6 +632,7 @@ let sessionPassword = null;  // client's password for the current session
 let isAdminSession = false;  // true when admin opened session (no password required)
 let currentVideo = null;     // { stream_uid, title, description }
 let currentTime = 0;
+let streamPlayer = null;
 let commentsCache = [];
 let editingReviewId = null;
 
@@ -633,7 +655,7 @@ function updateHeader(panel) {
   } else if (panel === 'Session') {
     ha.innerHTML = `
       <button class="rv-btn rv-btn-sm" onclick="openUploadModal()">+ Upload Video</button>
-      <button class="rv-btn rv-btn-ghost rv-btn-sm" onclick="goToAdmin()">All Reviews</button>
+      <button class="rv-btn rv-btn-ghost rv-btn-sm" onclick="goToAdmin()">All Projects</button>
       ${signOut}
     `;
   } else {
@@ -650,13 +672,6 @@ function updateHeader(panel) {
   }
   showPanel('Gate');
 
-  window.addEventListener('message', function (e) {
-    if (e.data && typeof e.data.currentTime === 'number') {
-      currentTime = e.data.currentTime;
-      document.getElementById('timecode').textContent = formatTime(currentTime);
-      document.getElementById('commentAt').textContent = 'At ' + formatTime(currentTime);
-    }
-  });
 })();
 
 // ─── Gate ─────────────────────────────────────────────────────────────────────
@@ -691,7 +706,7 @@ async function accessReview() {
     showErr(errEl, 'Network error. Try again.');
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Access Review';
+    btn.textContent = 'Access Project';
   }
 }
 
@@ -750,7 +765,7 @@ async function goToAdmin() {
 function renderAdminReviewList(sessions) {
   const el = document.getElementById('reviewList');
   if (!sessions.length) {
-    el.innerHTML = '<p class="rv-notice" style="padding:24px 0">No reviews yet. Create one to get started.</p>';
+    el.innerHTML = '<p class="rv-notice" style="padding:24px 0">No projects yet. Create one to get started.</p>';
     return;
   }
   el.innerHTML = sessions.map(s => `
@@ -802,7 +817,7 @@ async function adminOpenSession(id, name) {
 }
 
 async function deleteReview(id, name) {
-  if (!confirm(`Delete review "${name}"?\nThis will permanently delete all videos and comments.`)) return;
+  if (!confirm(`Delete project "${name}"?\nThis will permanently delete all videos and comments.`)) return;
   const resp = await fetch(`${WORKER_URL}/api/review/${encodeURIComponent(id)}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${adminToken}` },
@@ -814,7 +829,7 @@ async function deleteReview(id, name) {
 // ─── New / Edit Review Modal ──────────────────────────────────────────────────
 function openNewReviewModal() {
   editingReviewId = null;
-  document.getElementById('reviewModalTitle').textContent = 'New Review';
+  document.getElementById('reviewModalTitle').textContent = 'New Project';
   document.getElementById('reviewName').value = '';
   document.getElementById('reviewPass').value = '';
   document.getElementById('reviewPassLabel').textContent = 'Client Password';
@@ -827,7 +842,7 @@ function openNewReviewModal() {
 
 function openEditReviewModal(id, name) {
   editingReviewId = id;
-  document.getElementById('reviewModalTitle').textContent = 'Edit Review';
+  document.getElementById('reviewModalTitle').textContent = 'Edit Project';
   document.getElementById('reviewName').value = name;
   document.getElementById('reviewPass').value = '';
   document.getElementById('reviewPassLabel').textContent = 'New Password';
@@ -849,7 +864,7 @@ async function saveReview() {
   const btn = document.getElementById('reviewModalSaveBtn');
   errEl.style.display = 'none';
 
-  if (!name) { showErr(errEl, 'Enter a review name.'); return; }
+  if (!name) { showErr(errEl, 'Enter a project name.'); return; }
   if (!editingReviewId && !pass) { showErr(errEl, 'Enter a client password.'); return; }
 
   btn.disabled = true;
@@ -968,27 +983,85 @@ function backFromSession() {
 function openVideo(uid, title, description) {
   currentVideo = { stream_uid: uid, title, description };
   currentTime = 0;
+  streamPlayer = null;
 
   document.getElementById('playerTitle').textContent = title;
-  document.getElementById('streamPlayer').src =
-    `https://iframe.cloudflarestream.com/${uid}?muted=false&preload=auto&loop=false`;
-
   document.getElementById('timecode').textContent = '0:00';
   document.getElementById('commentAt').textContent = 'At 0:00';
   document.getElementById('commentText').value = '';
-  document.getElementById('adminVideoActions').style.display = adminToken ? 'block' : 'none';
+  document.getElementById('adminVideoActions').style.display = adminToken ? 'flex' : 'none';
+
+  const iframe = document.getElementById('streamPlayer');
+  iframe.src = `https://iframe.cloudflarestream.com/${uid}?preload=auto&loop=false`;
+  iframe.onload = function () {
+    streamPlayer = Stream(iframe);
+    streamPlayer.muted = false;
+    streamPlayer.addEventListener('timeupdate', function () {
+      currentTime = streamPlayer.currentTime;
+      document.getElementById('timecode').textContent = formatTime(currentTime);
+      document.getElementById('commentAt').textContent = 'At ' + formatTime(currentTime);
+    });
+  };
 
   loadComments(uid);
   showPanel('Player');
 }
 
 function backToSession() {
+  streamPlayer = null;
   document.getElementById('streamPlayer').src = '';
   showPanel('Session');
 }
 
-function addCommentAtTime() {
-  document.getElementById('commentText').focus();
+function openEditVideoModal() {
+  if (!currentVideo) return;
+  document.getElementById('editVideoTitle').value = currentVideo.title;
+  document.getElementById('editVideoDesc').value = currentVideo.description || '';
+  document.getElementById('editVideoErr').style.display = 'none';
+  document.getElementById('editVideoSaveBtn').textContent = 'Save';
+  document.getElementById('editVideoModal').classList.add('open');
+  setTimeout(() => document.getElementById('editVideoTitle').focus(), 100);
+}
+
+function closeEditVideoModal() {
+  document.getElementById('editVideoModal').classList.remove('open');
+}
+
+async function saveVideoEdit() {
+  const title = document.getElementById('editVideoTitle').value.trim();
+  const description = document.getElementById('editVideoDesc').value.trim();
+  const errEl = document.getElementById('editVideoErr');
+  const btn = document.getElementById('editVideoSaveBtn');
+
+  errEl.style.display = 'none';
+  if (!title) { showErr(errEl, 'Title is required.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  try {
+    const resp = await fetch(`${WORKER_URL}/api/stream/${encodeURIComponent(currentVideo.stream_uid)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({ title, description }),
+    });
+
+    if (!resp.ok) {
+      const d = await resp.json();
+      showErr(errEl, d.error || 'Save failed.');
+      return;
+    }
+
+    currentVideo.title = title;
+    currentVideo.description = description;
+    document.getElementById('playerTitle').textContent = title;
+    closeEditVideoModal();
+  } catch {
+    showErr(errEl, 'Network error.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save';
+  }
 }
 
 async function deleteCurrentVideo() {
@@ -1085,9 +1158,9 @@ async function deleteComment(e, id) {
 }
 
 function seekTo(seconds) {
-  document.getElementById('streamPlayer').contentWindow.postMessage(
-    { event: 'seek', seconds }, '*'
-  );
+  if (streamPlayer) {
+    streamPlayer.currentTime = seconds;
+  }
   currentTime = seconds;
   document.getElementById('timecode').textContent = formatTime(seconds);
   document.getElementById('commentAt').textContent = 'At ' + formatTime(seconds);
@@ -1145,7 +1218,9 @@ async function doStreamUpload() {
     await new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open('POST', uploadUrl);
-      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+      // Use FormData (multipart/form-data) — avoids CORS preflight that blocks raw binary uploads
+      const formData = new FormData();
+      formData.append('file', file);
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) {
           const pct = Math.round((e.loaded / e.total) * 100);
@@ -1157,7 +1232,7 @@ async function doStreamUpload() {
         ? resolve()
         : reject(new Error(`Upload returned HTTP ${xhr.status}`));
       xhr.onerror = () => reject(new Error('Network error during upload'));
-      xhr.send(file);
+      xhr.send(formData);
     });
 
     label.textContent = 'Upload complete — processing may take a few minutes.';
