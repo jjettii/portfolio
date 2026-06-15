@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>File Transfer — Jordan Ettinger</title>
+  <link rel="icon" type="image/png" href="../assets/favicon/favicon-96x96.png" sizes="96x96">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <style>
+    body { background: #fff; min-height: 100vh; }
+
+    .ft-wrap {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 80px 24px 80px;
+    }
+
+    .ft-logo {
+      display: block;
+      margin-bottom: 56px;
+    }
+    .ft-logo img { height: 22px; width: auto; }
+
+    .ft-section { display: none; }
+    .ft-section.active { display: block; }
+
+    /* Headings */
+    .ft-heading {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+    .ft-sub {
+      font-size: 14px;
+      font-weight: 300;
+      color: #666;
+      margin-bottom: 40px;
+    }
+
+    /* Form */
+    .ft-field { margin-bottom: 20px; }
+    .ft-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      color: #000;
+    }
+    .ft-input {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid #ccc;
+      font-family: 'AkzidenzGrotesk', sans-serif;
+      font-size: 15px;
+      font-weight: 300;
+      color: #000;
+      background: #fff;
+      transition: border-color 0.2s;
+    }
+    .ft-input:focus { outline: none; border-color: #000; }
+    .ft-input::placeholder { color: #aaa; }
+
+    .ft-btn {
+      display: inline-block;
+      padding: 12px 32px;
+      background: #000;
+      color: #fff;
+      border: none;
+      font-family: 'AkzidenzGrotesk', sans-serif;
+      font-size: 12px;
+      font-weight: 400;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      width: 100%;
+      text-align: center;
+    }
+    .ft-btn:hover { opacity: 0.75; }
+    .ft-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .ft-btn-ghost {
+      background: transparent;
+      color: #000;
+      border: 1px solid #000;
+    }
+
+    /* Drop zone */
+    .ft-dropzone {
+      border: 1px dashed #ccc;
+      padding: 40px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      margin-bottom: 20px;
+    }
+    .ft-dropzone.drag-over { border-color: #000; background: #f8f8f8; }
+    .ft-dropzone-icon { font-size: 28px; margin-bottom: 10px; }
+    .ft-dropzone-label {
+      font-size: 13px;
+      font-weight: 300;
+      color: #666;
+      line-height: 1.6;
+    }
+    .ft-dropzone-label strong { font-weight: 400; color: #000; }
+    .ft-dropzone-filename {
+      font-size: 13px;
+      font-weight: 400;
+      color: #000;
+      margin-top: 8px;
+    }
+    #fileInput { display: none; }
+
+    /* Progress */
+    .ft-progress { margin-bottom: 20px; display: none; }
+    .ft-progress-bar-wrap {
+      height: 3px;
+      background: #eee;
+      margin-bottom: 8px;
+    }
+    .ft-progress-bar {
+      height: 3px;
+      background: #000;
+      width: 0%;
+      transition: width 0.2s;
+    }
+    .ft-progress-label {
+      font-size: 12px;
+      font-weight: 300;
+      color: #666;
+    }
+
+    /* File info card */
+    .ft-card {
+      border: 1px solid #e0e0e0;
+      padding: 28px 24px;
+      margin-bottom: 24px;
+    }
+    .ft-card-name {
+      font-size: 18px;
+      font-weight: 400;
+      margin-bottom: 6px;
+      word-break: break-all;
+    }
+    .ft-card-meta {
+      font-size: 13px;
+      font-weight: 300;
+      color: #666;
+      margin-bottom: 4px;
+    }
+    .ft-card-desc {
+      font-size: 14px;
+      font-weight: 300;
+      color: #444;
+      margin-top: 12px;
+      line-height: 1.6;
+    }
+
+    /* Share box */
+    .ft-share {
+      background: #f5f5f5;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .ft-share-label {
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .ft-share-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .ft-share-url {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 300;
+      color: #000;
+      border: 1px solid #ccc;
+      padding: 9px 12px;
+      background: #fff;
+      word-break: break-all;
+      font-family: 'AkzidenzGrotesk', sans-serif;
+    }
+    .ft-copy-btn {
+      padding: 9px 16px;
+      background: #000;
+      color: #fff;
+      border: none;
+      font-family: 'AkzidenzGrotesk', sans-serif;
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.2s;
+    }
+    .ft-copy-btn:hover { opacity: 0.75; }
+
+    /* Divider */
+    .ft-divider {
+      border: none;
+      border-top: 1px solid #e0e0e0;
+      margin: 48px 0;
+    }
+
+    /* Admin toggle */
+    .ft-admin-toggle {
+      text-align: center;
+      margin-top: 8px;
+    }
+    .ft-admin-toggle a {
+      font-size: 12px;
+      font-weight: 300;
+      color: #aaa;
+      text-decoration: none;
+      letter-spacing: 0.5px;
+      transition: color 0.2s;
+    }
+    .ft-admin-toggle a:hover { color: #000; }
+
+    /* Admin list */
+    .ft-list { margin-top: 24px; }
+    .ft-list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      border-bottom: 1px solid #e0e0e0;
+      gap: 12px;
+    }
+    .ft-list-info { flex: 1; min-width: 0; }
+    .ft-list-name {
+      font-size: 14px;
+      font-weight: 400;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .ft-list-meta { font-size: 12px; font-weight: 300; color: #888; margin-top: 2px; }
+    .ft-delete-btn {
+      background: none;
+      border: none;
+      font-family: 'AkzidenzGrotesk', sans-serif;
+      font-size: 11px;
+      font-weight: 300;
+      color: #aaa;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      padding: 4px 0;
+      transition: color 0.2s;
+      flex-shrink: 0;
+    }
+    .ft-delete-btn:hover { color: #c00; }
+
+    /* Error / notice */
+    .ft-error { color: #c00; font-size: 13px; margin-top: 8px; font-weight: 300; }
+    .ft-notice { color: #666; font-size: 13px; margin-top: 8px; font-weight: 300; }
+
+    @media (max-width: 480px) {
+      .ft-wrap { padding: 60px 20px 60px; }
+    }
+  </style>
+</head>
+<body>
+<div class="ft-wrap">
+
+  <a class="ft-logo" href="../home.html">
+    <img src="../assets/img/logo.webp" alt="Jordan Ettinger">
+  </a>
+
+  <!-- ═══ DOWNLOAD SECTION ════════════════════════════════════════════════════ -->
+  <div class="ft-section active" id="sectionDownload">
+    <h1 class="ft-heading">File Transfer</h1>
+    <p class="ft-sub">Enter your transfer ID and password to access your files.</p>
+
+    <!-- Step 1: ID + password form -->
+    <div id="dlForm">
+      <div class="ft-field">
+        <label class="ft-label" for="dlId">Transfer ID</label>
+        <input class="ft-input" type="text" id="dlId" placeholder="e.g. 3f2a7b1c-..." autocomplete="off" spellcheck="false">
+      </div>
+      <div class="ft-field">
+        <label class="ft-label" for="dlPass">Password</label>
+        <input class="ft-input" type="password" id="dlPass" placeholder="Password" autocomplete="off">
+        <div class="ft-error" id="dlError" style="display:none"></div>
+      </div>
+      <button class="ft-btn" id="dlLookupBtn" onclick="lookupTransfer()">Access Files</button>
+    </div>
+
+    <!-- Step 2: File info + download -->
+    <div id="dlInfo" style="display:none">
+      <div class="ft-card">
+        <div class="ft-card-name" id="dlFilename"></div>
+        <div class="ft-card-meta" id="dlSize"></div>
+        <div class="ft-card-meta" id="dlDate"></div>
+        <div class="ft-card-desc" id="dlDesc"></div>
+      </div>
+      <button class="ft-btn" id="dlBtn" onclick="downloadFile()">Download</button>
+      <p class="ft-notice">Download link expires in 1 hour.</p>
+    </div>
+
+    <hr class="ft-divider">
+    <div class="ft-admin-toggle">
+      <a href="#" onclick="toggleAdmin(event)">Admin</a>
+    </div>
+  </div>
+
+  <!-- ═══ ADMIN SECTION ════════════════════════════════════════════════════════ -->
+  <div class="ft-section" id="sectionAdmin">
+
+    <!-- Admin auth gate -->
+    <div id="adminAuth">
+      <h1 class="ft-heading">Admin</h1>
+      <p class="ft-sub">Enter your admin password to manage transfers.</p>
+      <div class="ft-field">
+        <label class="ft-label" for="adminPass">Admin Password</label>
+        <input class="ft-input" type="password" id="adminPass" placeholder="Admin password"
+               autocomplete="off" onkeydown="if(event.key==='Enter')adminLogin()">
+        <div class="ft-error" id="adminError" style="display:none"></div>
+      </div>
+      <button class="ft-btn" onclick="adminLogin()">Sign In</button>
+      <div style="margin-top:16px; text-align:center">
+        <a href="#" style="font-size:12px;font-weight:300;color:#aaa;text-decoration:none"
+           onclick="toggleAdmin(event)">← Back</a>
+      </div>
+    </div>
+
+    <!-- Admin dashboard (shown after auth) -->
+    <div id="adminDash" style="display:none">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:40px">
+        <div>
+          <h1 class="ft-heading" style="margin-bottom:0">Transfers</h1>
+        </div>
+        <button class="ft-btn" style="width:auto;padding:10px 20px"
+                onclick="showUploadForm()">+ New Transfer</button>
+      </div>
+
+      <!-- Upload form -->
+      <div id="uploadForm" style="display:none; margin-bottom:48px">
+        <h2 style="font-size:16px;font-weight:400;margin-bottom:24px;border-bottom:1px solid #e0e0e0;padding-bottom:12px">
+          New Transfer</h2>
+
+        <input type="file" id="fileInput" onchange="onFileChosen(this)">
+        <div class="ft-dropzone" id="dropzone"
+             onclick="document.getElementById('fileInput').click()"
+             ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+          <div class="ft-dropzone-icon">↑</div>
+          <div class="ft-dropzone-label">
+            <strong>Click to choose a file</strong><br>or drag and drop here
+          </div>
+          <div class="ft-dropzone-filename" id="chosenFile"></div>
+        </div>
+
+        <div class="ft-field">
+          <label class="ft-label" for="upDesc">Description (optional)</label>
+          <input class="ft-input" type="text" id="upDesc" placeholder="e.g. Rough cut v2 for review">
+        </div>
+        <div class="ft-field">
+          <label class="ft-label" for="upPass">Download Password</label>
+          <input class="ft-input" type="text" id="upPass" placeholder="Password you'll share with the client"
+                 autocomplete="off" spellcheck="false">
+        </div>
+
+        <div class="ft-progress" id="uploadProgress">
+          <div class="ft-progress-bar-wrap">
+            <div class="ft-progress-bar" id="uploadBar"></div>
+          </div>
+          <div class="ft-progress-label" id="uploadLabel">Uploading…</div>
+        </div>
+
+        <div style="display:flex; gap:12px">
+          <button class="ft-btn" style="flex:1" id="uploadBtn" onclick="doUpload()">Upload</button>
+          <button class="ft-btn ft-btn-ghost" style="flex:none;width:auto;padding:12px 20px"
+                  onclick="hideUploadForm()">Cancel</button>
+        </div>
+        <div class="ft-error" id="uploadError" style="display:none; margin-top:12px"></div>
+      </div>
+
+      <!-- Share result -->
+      <div id="shareResult" style="display:none; margin-bottom:48px">
+        <h2 style="font-size:16px;font-weight:400;margin-bottom:16px">Transfer Ready</h2>
+        <div class="ft-share">
+          <div class="ft-share-label">Share this link</div>
+          <div class="ft-share-row">
+            <input class="ft-share-url" type="text" id="shareUrl" readonly>
+            <button class="ft-copy-btn" onclick="copyShareUrl()">Copy</button>
+          </div>
+        </div>
+        <button class="ft-btn ft-btn-ghost" style="width:auto;padding:10px 20px"
+                onclick="hideShareResult()">Done</button>
+      </div>
+
+      <!-- Transfer list -->
+      <div class="ft-list" id="transferList">
+        <p class="ft-notice" id="listNotice">Loading transfers…</p>
+      </div>
+
+      <div style="margin-top:40px; text-align:center">
+        <a href="#" style="font-size:12px;font-weight:300;color:#aaa;text-decoration:none"
+           onclick="adminLogout(event)">Sign out</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── Config ──────────────────────────────────────────────────────────────────
+// Replace this with your deployed Worker URL after running `wrangler deploy`
+const WORKER_URL = 'https://portfolio-worker.jordanettinger.workers.dev';
+
+// ─── State ───────────────────────────────────────────────────────────────────
+let adminToken = null;
+let currentTransferId = null;
+let currentPassword = null;
+let chosenFile = null;
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+(function init() {
+  const params = new URLSearchParams(location.search);
+  const id = params.get('id');
+  if (id) {
+    document.getElementById('dlId').value = id;
+    document.getElementById('dlPass').focus();
+  }
+})();
+
+// ─── Download flow ────────────────────────────────────────────────────────────
+async function lookupTransfer() {
+  const id = document.getElementById('dlId').value.trim();
+  const pass = document.getElementById('dlPass').value;
+  const errEl = document.getElementById('dlError');
+  const btn = document.getElementById('dlLookupBtn');
+
+  errEl.style.display = 'none';
+  if (!id || !pass) { showErr(errEl, 'Please enter both ID and password.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Checking…';
+
+  try {
+    const resp = await fetch(`${WORKER_URL}/api/transfer/${encodeURIComponent(id)}?password=${encodeURIComponent(pass)}`);
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      showErr(errEl, data.error || 'Something went wrong.');
+      return;
+    }
+
+    currentTransferId = id;
+    currentPassword = pass;
+
+    document.getElementById('dlFilename').textContent = data.filename;
+    document.getElementById('dlSize').textContent = data.filesize ? formatBytes(data.filesize) : '';
+    document.getElementById('dlDate').textContent = data.created_at
+      ? 'Uploaded ' + new Date(data.created_at).toLocaleDateString('en-CA', { month: 'long', day: 'numeric', year: 'numeric' })
+      : '';
+    const descEl = document.getElementById('dlDesc');
+    descEl.textContent = data.description || '';
+    descEl.style.display = data.description ? 'block' : 'none';
+
+    document.getElementById('dlForm').style.display = 'none';
+    document.getElementById('dlInfo').style.display = 'block';
+
+  } catch {
+    showErr(errEl, 'Network error. Please try again.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Access Files';
+  }
+}
+
+async function downloadFile() {
+  const btn = document.getElementById('dlBtn');
+  btn.disabled = true;
+  btn.textContent = 'Generating link…';
+
+  try {
+    const resp = await fetch(
+      `${WORKER_URL}/api/transfer/${encodeURIComponent(currentTransferId)}/download?password=${encodeURIComponent(currentPassword)}`
+    );
+    const data = await resp.json();
+    if (!resp.ok) { alert(data.error || 'Download failed.'); return; }
+
+    const a = document.createElement('a');
+    a.href = data.downloadUrl;
+    a.download = data.filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } catch {
+    alert('Network error. Please try again.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Download';
+  }
+}
+
+// ─── Admin flow ───────────────────────────────────────────────────────────────
+function toggleAdmin(e) {
+  e.preventDefault();
+  document.getElementById('sectionDownload').classList.toggle('active');
+  document.getElementById('sectionAdmin').classList.toggle('active');
+}
+
+async function adminLogin() {
+  const pass = document.getElementById('adminPass').value;
+  const errEl = document.getElementById('adminError');
+  errEl.style.display = 'none';
+
+  if (!pass) { showErr(errEl, 'Enter admin password.'); return; }
+
+  const resp = await fetch(`${WORKER_URL}/api/transfers`, {
+    headers: { Authorization: `Bearer ${pass}` },
+  });
+
+  if (!resp.ok) { showErr(errEl, 'Incorrect password.'); return; }
+
+  adminToken = pass;
+  document.getElementById('adminAuth').style.display = 'none';
+  document.getElementById('adminDash').style.display = 'block';
+  renderTransferList(await resp.json());
+}
+
+function adminLogout(e) {
+  e.preventDefault();
+  adminToken = null;
+  document.getElementById('adminAuth').style.display = 'block';
+  document.getElementById('adminDash').style.display = 'none';
+  document.getElementById('adminPass').value = '';
+  document.getElementById('sectionAdmin').classList.remove('active');
+  document.getElementById('sectionDownload').classList.add('active');
+}
+
+async function refreshList() {
+  const resp = await fetch(`${WORKER_URL}/api/transfers`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  if (resp.ok) renderTransferList(await resp.json());
+}
+
+function renderTransferList(items) {
+  const el = document.getElementById('transferList');
+  const notice = document.getElementById('listNotice');
+  if (!items.length) {
+    notice.style.display = 'block';
+    notice.textContent = 'No transfers yet.';
+    el.innerHTML = '';
+    el.appendChild(notice);
+    return;
+  }
+  notice.style.display = 'none';
+  el.innerHTML = items.map(t => `
+    <div class="ft-list-item">
+      <div class="ft-list-info">
+        <div class="ft-list-name">${esc(t.filename)}</div>
+        <div class="ft-list-meta">${t.filesize ? formatBytes(t.filesize) + ' · ' : ''}${
+          new Date(t.created_at).toLocaleDateString('en-CA')
+        }${t.description ? ' · ' + esc(t.description) : ''}</div>
+      </div>
+      <button class="ft-delete-btn" onclick="deleteTransfer('${esc(t.id)}')">Delete</button>
+    </div>
+  `).join('');
+}
+
+async function deleteTransfer(id) {
+  if (!confirm('Delete this transfer? The file will be permanently removed.')) return;
+  const resp = await fetch(`${WORKER_URL}/api/transfer/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  if (resp.ok) refreshList();
+  else alert('Delete failed.');
+}
+
+// ─── Upload flow ──────────────────────────────────────────────────────────────
+function showUploadForm() {
+  document.getElementById('uploadForm').style.display = 'block';
+  document.getElementById('shareResult').style.display = 'none';
+}
+function hideUploadForm() {
+  document.getElementById('uploadForm').style.display = 'none';
+  chosenFile = null;
+  document.getElementById('chosenFile').textContent = '';
+  document.getElementById('upDesc').value = '';
+  document.getElementById('upPass').value = '';
+  document.getElementById('uploadProgress').style.display = 'none';
+  document.getElementById('uploadBar').style.width = '0%';
+  document.getElementById('uploadError').style.display = 'none';
+}
+function hideShareResult() {
+  document.getElementById('shareResult').style.display = 'none';
+}
+
+function onFileChosen(input) {
+  chosenFile = input.files[0] || null;
+  document.getElementById('chosenFile').textContent = chosenFile ? chosenFile.name : '';
+}
+
+function onDragOver(e) {
+  e.preventDefault();
+  document.getElementById('dropzone').classList.add('drag-over');
+}
+function onDragLeave(e) {
+  e.preventDefault();
+  document.getElementById('dropzone').classList.remove('drag-over');
+}
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropzone').classList.remove('drag-over');
+  chosenFile = e.dataTransfer.files[0] || null;
+  document.getElementById('chosenFile').textContent = chosenFile ? chosenFile.name : '';
+}
+
+async function doUpload() {
+  const pass = document.getElementById('upPass').value.trim();
+  const desc = document.getElementById('upDesc').value.trim();
+  const errEl = document.getElementById('uploadError');
+  const btn = document.getElementById('uploadBtn');
+
+  errEl.style.display = 'none';
+  if (!chosenFile) { showErr(errEl, 'Choose a file first.'); return; }
+  if (!pass) { showErr(errEl, 'Enter a download password.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Uploading…';
+
+  try {
+    // Step 1: Create transfer record and get presigned upload URL
+    const createResp = await fetch(`${WORKER_URL}/api/transfer/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify({
+        filename: chosenFile.name,
+        filesize: chosenFile.size,
+        description: desc || null,
+        password: pass,
+      }),
+    });
+
+    if (!createResp.ok) {
+      const d = await createResp.json();
+      showErr(errEl, d.error || 'Could not create transfer.');
+      return;
+    }
+
+    const { id, uploadUrl } = await createResp.json();
+
+    // Step 2: Upload file directly to R2 via presigned URL
+    const progressWrap = document.getElementById('uploadProgress');
+    const bar = document.getElementById('uploadBar');
+    const label = document.getElementById('uploadLabel');
+    progressWrap.style.display = 'block';
+
+    await uploadWithProgress(uploadUrl, chosenFile, (pct) => {
+      bar.style.width = pct + '%';
+      label.textContent = `Uploading… ${pct}%`;
+    });
+
+    label.textContent = 'Upload complete.';
+
+    // Show shareable link
+    const shareUrl = `${location.origin}/transfer/?id=${id}`;
+    document.getElementById('shareUrl').value = shareUrl;
+    document.getElementById('uploadForm').style.display = 'none';
+    document.getElementById('shareResult').style.display = 'block';
+    hideUploadForm();
+    document.getElementById('shareResult').style.display = 'block';
+    document.getElementById('shareUrl').value = shareUrl;
+
+    await refreshList();
+
+  } catch (err) {
+    showErr(errEl, 'Upload failed: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Upload';
+  }
+}
+
+function uploadWithProgress(url, file, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', url);
+    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`HTTP ${xhr.status}`));
+    xhr.onerror = () => reject(new Error('Network error'));
+    xhr.send(file);
+  });
+}
+
+function copyShareUrl() {
+  const input = document.getElementById('shareUrl');
+  input.select();
+  navigator.clipboard.writeText(input.value).catch(() => document.execCommand('copy'));
+  const btn = event.target;
+  btn.textContent = 'Copied';
+  setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+}
+
+// ─── Utilities ────────────────────────────────────────────────────────────────
+function showErr(el, msg) {
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function formatBytes(bytes) {
+  if (!bytes) return '';
+  const gb = bytes / 1e9;
+  if (gb >= 1) return gb.toFixed(2) + ' GB';
+  const mb = bytes / 1e6;
+  if (mb >= 1) return mb.toFixed(1) + ' MB';
+  return (bytes / 1e3).toFixed(0) + ' KB';
+}
+</script>
+</body>
+</html>

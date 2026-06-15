@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Video Review — Jordan Ettinger</title>
+  <link rel="icon" type="image/png" href="../assets/favicon/favicon-96x96.png" sizes="96x96">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <style>
+    body { background: #fff; }
+
+    /* ── Layout ── */
+    .rv-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px 40px;
+      border-bottom: 1px solid #e0e0e0;
+      position: sticky;
+      top: 0;
+      background: #fff;
+      z-index: 50;
+    }
+    .rv-logo img { height: 20px; width: auto; display: block; }
+    .rv-header-actions { display: flex; gap: 12px; align-items: center; }
+
+    /* ── Buttons ── */
+    .rv-btn {
+      padding: 9px 20px;
+      background: #000;
+      color: #fff;
+      border: none;
+      font-family: 'AkzidenzGrotesk', sans-serif;
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .rv-btn:hover { opacity: 0.75; }
+    .rv-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .rv-btn-ghost {
+      background: transparent;
+      color: #000;
+      border: 1px solid #ccc;
+    }
+    .rv-btn-ghost:hover { border-color: #000; }
+    .rv-btn-sm {
+      padding: 6px 14px;
+      font-size: 10px;
+    }
+    .rv-btn-danger { background: #c00; }
+
+    /* ── Panels ── */
+    .rv-panel { display: none; }
+    .rv-panel.active { display: block; }
+
+    /* ── Video list ── */
+    .rv-list-wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 48px 40px;
+    }
+    .rv-list-heading {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 32px;
+    }
+    .rv-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 20px;
+    }
+    .rv-thumb {
+      cursor: pointer;
+      border: 1px solid #e0e0e0;
+      transition: border-color 0.2s;
+    }
+    .rv-thumb:hover { border-color: #000; }
+    .rv-thumb-img {
+      width: 100%;
+      aspect-ratio: 16/9;
+      object-fit: cover;
+      display: block;
+      background: #111;
+    }
+    .rv-thumb-body { padding: 14px; }
+    .rv-thumb-title {
+      font-size: 14px;
+      font-weight: 400;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .rv-thumb-meta { font-size: 12px; font-weight: 300; color: #888; }
+    .rv-thumb-desc { font-size: 12px; font-weight: 300; color: #666; margin-top: 4px; }
+
+    .rv-empty {
+      text-align: center;
+      padding: 80px 0;
+      color: #aaa;
+      font-size: 14px;
+      font-weight: 300;
+    }
+
+    /* ── Player view ── */
+    .rv-player-wrap {
+      display: flex;
+      height: calc(100vh - 73px);
+      overflow: hidden;
+    }
+
+    .rv-player-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .rv-player-top {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 24px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .rv-back-btn {
+      background: none;
+      border: none;
+      font-family: 'AkzidenzGrotesk', sans-serif;
+      font-size: 12px;
+      font-weight: 300;
+      color: #888;
+      cursor: pointer;
+      padding: 0;
+      letter-spacing: 0.5px;
+      transition: color 0.2s;
+    }
+    .rv-back-btn:hover { color: #000; }
+    .rv-player-title {
+      font-size: 15px;
+      font-weight: 400;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .rv-player-frame {
+      flex: 1;
+      position: relative;
+      background: #000;
+    }
+    .rv-player-frame iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .rv-player-controls {
+      padding: 12px 24px;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .rv-timecode {
+      font-size: 13px;
+      font-weight: 300;
+      color: #666;
+      font-variant-numeric: tabular-nums;
+      min-width: 72px;
+    }
+
+    /* ── Comments sidebar ── */
+    .rv-sidebar {
+      width: 320px;
+      flex-shrink: 0;
+      border-left: 1px solid #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .rv-sidebar-head {
+      padding: 16px 20px;
+      border-bottom: 1px solid #e0e0e0;
+      font-size: 12px;
+      font-weight: 400;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .rv-comment-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+
+    .rv-comment {
+      padding: 12px 20px;
+      border-bottom: 1px solid #f0f0f0;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .rv-comment:hover { background: #fafafa; }
+    .rv-comment.active { background: #f5f5f5; }
+    .rv-comment-ts {
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 0.5px;
+      color: #888;
+      margin-bottom: 4px;
+      display: inline-block;
+      background: #eee;
+      padding: 2px 6px;
+    }
+    .rv-comment-author {
+      font-size: 12px;
+      font-weight: 400;
+      color: #000;
+      margin-bottom: 3px;
+    }
+    .rv-comment-body {
+      font-size: 13px;
+      font-weight: 300;
+      color: #333;
+      line-height: 1.5;
+    }
+    .rv-comment-delete {
+      display: none;
+      background: none;
+      border: none;
+      font-family: 'AkzidenzGrotesk', sans-serif;
+      font-size: 11px;
+      color: #aaa;
+      cursor: pointer;
+      padding: 0;
+      margin-top: 6px;
+      transition: color 0.2s;
+    }
+    .rv-comment-delete:hover { color: #c00; }
+
+    .rv-comment-form {
+      border-top: 1px solid #e0e0e0;
+      padding: 16px 20px;
+    }
+    .rv-comment-form textarea {
+      width: 100%;
+      height: 72px;
+      padding: 10px 12px;
+      border: 1px solid #ccc;
+      font-family: 'AkzidenzGrotesk', sans-serif;
+      font-size: 13px;
+      font-weight: 300;
+      resize: none;
+      transition: border-color 0.2s;
+      margin-bottom: 8px;
+    }
+    .rv-comment-form textarea:focus { outline: none; border-color: #000; }
+    .rv-comment-form-row {
+      display: flex;
+      gap: 8px;
+    }
+    .rv-comment-form-row input {
+      flex: 1;
+      padding: 8px 10px;
+      border: 1px solid #ccc;
+      font-family: 'AkzidenzGrotesk', sans-serif;
+      font-size: 12px;
+      font-weight: 300;
+      transition: border-color 0.2s;
+    }
+    .rv-comment-form-row input:focus { outline: none; border-color: #000; }
+    .rv-comment-at {
+      font-size: 11px;
+      font-weight: 300;
+      color: #888;
+      margin-bottom: 6px;
+    }
+
+    /* ── Admin upload modal ── */
+    .rv-modal-bg {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .rv-modal-bg.open { display: flex; }
+    .rv-modal {
+      background: #fff;
+      width: 100%;
+      max-width: 520px;
+      padding: 40px;
+      margin: 20px;
+    }
+    .rv-modal h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 24px;
+    }
+    .rv-field { margin-bottom: 18px; }
+    .rv-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 7px;
+    }
+    .rv-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ccc;
+      font-family: 'AkzidenzGrotesk', sans-serif;
+      font-size: 14px;
+      font-weight: 300;
+      transition: border-color 0.2s;
+    }
+    .rv-input:focus { outline: none; border-color: #000; }
+    .rv-modal-actions { display: flex; gap: 12px; margin-top: 24px; }
+    .rv-upload-progress { margin-top: 16px; display: none; }
+    .rv-upload-bar-wrap { height: 3px; background: #eee; margin-bottom: 6px; }
+    .rv-upload-bar { height: 3px; background: #000; width: 0%; transition: width 0.3s; }
+    .rv-upload-label { font-size: 12px; font-weight: 300; color: #666; }
+    .rv-modal-err { color: #c00; font-size: 13px; margin-top: 8px; font-weight: 300; display: none; }
+
+    /* ── Admin auth modal ── */
+    .rv-auth-bg {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,0.95);
+      z-index: 300;
+      align-items: center;
+      justify-content: center;
+    }
+    .rv-auth-bg.open { display: flex; }
+    .rv-auth-box { width: 100%; max-width: 360px; padding: 20px; }
+    .rv-auth-box h2 { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+
+    /* ── Misc ── */
+    .rv-notice { font-size: 13px; font-weight: 300; color: #888; }
+
+    @media (max-width: 768px) {
+      .rv-header { padding: 18px 20px; }
+      .rv-player-wrap { flex-direction: column; height: auto; }
+      .rv-sidebar { width: 100%; border-left: none; border-top: 1px solid #e0e0e0; height: 50vh; }
+      .rv-player-frame { aspect-ratio: 16/9; position: relative; height: auto; flex: none; }
+      .rv-player-frame iframe { position: static; height: 100%; }
+      .rv-list-wrap { padding: 32px 20px; }
+      .rv-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══════════════════════════════════════════════════════════════ -->
+<header class="rv-header">
+  <a class="rv-logo" href="../home.html">
+    <img src="../assets/img/logo.webp" alt="Jordan Ettinger">
+  </a>
+  <div class="rv-header-actions" id="headerActions">
+    <button class="rv-btn rv-btn-ghost rv-btn-sm" onclick="openAdminAuth()">Admin</button>
+  </div>
+</header>
+
+<!-- ═══ VIDEO LIST PANEL ══════════════════════════════════════════════════════ -->
+<div class="rv-panel active" id="panelList">
+  <div class="rv-list-wrap">
+    <h1 class="rv-list-heading">Review</h1>
+    <div class="rv-grid" id="videoGrid">
+      <p class="rv-notice" id="gridNotice" style="grid-column:1/-1">Loading…</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PLAYER PANEL ══════════════════════════════════════════════════════════ -->
+<div class="rv-panel" id="panelPlayer">
+  <div class="rv-player-wrap">
+
+    <!-- Left: video + controls -->
+    <div class="rv-player-main">
+      <div class="rv-player-top">
+        <button class="rv-back-btn" onclick="backToList()">← All videos</button>
+        <div class="rv-player-title" id="playerTitle"></div>
+        <div id="adminVideoActions" style="display:none">
+          <button class="rv-btn rv-btn-sm rv-btn-danger" onclick="deleteCurrentVideo()">Delete video</button>
+        </div>
+      </div>
+
+      <div class="rv-player-frame">
+        <iframe id="streamPlayer" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                allowfullscreen></iframe>
+      </div>
+
+      <div class="rv-player-controls">
+        <span class="rv-timecode" id="timecode">0:00</span>
+        <button class="rv-btn rv-btn-ghost rv-btn-sm" onclick="addCommentAtTime()">
+          + Comment at this time
+        </button>
+      </div>
+    </div>
+
+    <!-- Right: comments -->
+    <div class="rv-sidebar">
+      <div class="rv-sidebar-head">Comments</div>
+      <div class="rv-comment-list" id="commentList">
+        <p class="rv-notice" style="padding:20px">Loading…</p>
+      </div>
+      <div class="rv-comment-form">
+        <div class="rv-comment-at" id="commentAt">At 0:00</div>
+        <textarea id="commentText" placeholder="Leave a note…"></textarea>
+        <div class="rv-comment-form-row">
+          <input type="text" id="commentAuthor" placeholder="Your name">
+          <button class="rv-btn rv-btn-sm" onclick="submitComment()">Post</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ UPLOAD MODAL ══════════════════════════════════════════════════════════ -->
+<div class="rv-modal-bg" id="uploadModal">
+  <div class="rv-modal">
+    <h2>Upload to Stream</h2>
+
+    <div class="rv-field">
+      <label class="rv-label" for="upTitle">Video Title</label>
+      <input class="rv-input" type="text" id="upTitle" placeholder="e.g. Havn Saunas — Rough Cut v2">
+    </div>
+    <div class="rv-field">
+      <label class="rv-label" for="upDescription">Description (optional)</label>
+      <input class="rv-input" type="text" id="upDescription" placeholder="Notes for the client">
+    </div>
+    <div class="rv-field">
+      <label class="rv-label" for="upVideoFile">Video File</label>
+      <input class="rv-input" type="file" id="upVideoFile" accept="video/*" style="padding:8px 12px">
+    </div>
+
+    <div class="rv-upload-progress" id="modalProgress">
+      <div class="rv-upload-bar-wrap">
+        <div class="rv-upload-bar" id="modalBar"></div>
+      </div>
+      <div class="rv-upload-label" id="modalLabel">Uploading…</div>
+    </div>
+    <div class="rv-modal-err" id="modalErr"></div>
+
+    <div class="rv-modal-actions">
+      <button class="rv-btn" id="modalUploadBtn" onclick="doStreamUpload()">Upload</button>
+      <button class="rv-btn rv-btn-ghost" onclick="closeUploadModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ADMIN AUTH MODAL ══════════════════════════════════════════════════════ -->
+<div class="rv-auth-bg" id="adminAuthBg">
+  <div class="rv-auth-box">
+    <h2>Admin Sign In</h2>
+    <div class="rv-field">
+      <label class="rv-label" for="authPass">Admin Password</label>
+      <input class="rv-input" type="password" id="authPass" placeholder="Password"
+             onkeydown="if(event.key==='Enter')authLogin()">
+      <div class="rv-modal-err" id="authErr"></div>
+    </div>
+    <div class="rv-modal-actions">
+      <button class="rv-btn" onclick="authLogin()">Sign In</button>
+      <button class="rv-btn rv-btn-ghost" onclick="closeAdminAuth()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- tus-js-client for resumable upload to Cloudflare Stream -->
+<script src="https://cdn.jsdelivr.net/npm/tus-js-client@latest/dist/tus.min.js"></script>
+
+<script>
+// ─── Config — update after `wrangler deploy` ─────────────────────────────────
+const WORKER_URL = 'https://portfolio-worker.jordanettinger.workers.dev';
+
+// ─── State ───────────────────────────────────────────────────────────────────
+let adminToken = null;
+let currentVideo = null;         // { stream_uid, title, description }
+let currentTime = 0;             // seconds, polled from iframe via postMessage
+let commentsCache = [];
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+(function init() {
+  const params = new URLSearchParams(location.search);
+  const vid = params.get('v');
+  if (vid) {
+    // Deep link to a specific video
+    openVideoById(vid);
+  } else {
+    loadVideoList();
+  }
+
+  // Poll Stream player for current time via postMessage
+  window.addEventListener('message', function (e) {
+    if (e.data && typeof e.data.currentTime === 'number') {
+      currentTime = e.data.currentTime;
+      document.getElementById('timecode').textContent = formatTime(currentTime);
+      document.getElementById('commentAt').textContent = 'At ' + formatTime(currentTime);
+    }
+  });
+})();
+
+// ─── Video list ───────────────────────────────────────────────────────────────
+async function loadVideoList() {
+  try {
+    const resp = await fetch(`${WORKER_URL}/api/stream/videos`);
+    const videos = await resp.json();
+    renderVideoGrid(videos);
+  } catch {
+    document.getElementById('gridNotice').textContent = 'Could not load videos.';
+  }
+}
+
+function renderVideoGrid(videos) {
+  const grid = document.getElementById('videoGrid');
+  const notice = document.getElementById('gridNotice');
+
+  if (!videos.length) {
+    notice.style.display = 'block';
+    notice.textContent = 'No videos yet.';
+    grid.innerHTML = '';
+    grid.appendChild(notice);
+    return;
+  }
+
+  notice.style.display = 'none';
+  grid.innerHTML = videos.map(v => `
+    <div class="rv-thumb" onclick="openVideo(${JSON.stringify(esc(v.stream_uid))}, ${JSON.stringify(esc(v.title))}, ${JSON.stringify(esc(v.description || ''))})">
+      <img class="rv-thumb-img"
+           src="https://videodelivery.net/${esc(v.stream_uid)}/thumbnails/thumbnail.jpg?time=2s&width=640"
+           alt="${esc(v.title)}"
+           onerror="this.style.background='#111'">
+      <div class="rv-thumb-body">
+        <div class="rv-thumb-title">${esc(v.title)}</div>
+        <div class="rv-thumb-meta">${new Date(v.created_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+        ${v.description ? `<div class="rv-thumb-desc">${esc(v.description)}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function openVideoById(uid) {
+  // For deep links, fetch title from video list then open
+  fetch(`${WORKER_URL}/api/stream/videos`)
+    .then(r => r.json())
+    .then(videos => {
+      const v = videos.find(x => x.stream_uid === uid);
+      if (v) openVideo(v.stream_uid, v.title, v.description || '');
+      else openVideo(uid, 'Video', '');
+    })
+    .catch(() => openVideo(uid, 'Video', ''));
+}
+
+// ─── Player ───────────────────────────────────────────────────────────────────
+function openVideo(uid, title, description) {
+  currentVideo = { stream_uid: uid, title, description };
+  currentTime = 0;
+
+  document.getElementById('playerTitle').textContent = title;
+  document.getElementById('streamPlayer').src =
+    `https://iframe.cloudflarestream.com/${uid}?muted=false&preload=auto&loop=false`;
+
+  document.getElementById('timecode').textContent = '0:00';
+  document.getElementById('commentAt').textContent = 'At 0:00';
+  document.getElementById('commentText').value = '';
+
+  document.getElementById('panelList').classList.remove('active');
+  document.getElementById('panelPlayer').classList.add('active');
+
+  history.pushState(null, '', `?v=${uid}`);
+
+  // Show admin delete button if logged in
+  document.getElementById('adminVideoActions').style.display = adminToken ? 'block' : 'none';
+
+  loadComments(uid);
+}
+
+function backToList() {
+  document.getElementById('panelPlayer').classList.remove('active');
+  document.getElementById('panelList').classList.add('active');
+  document.getElementById('streamPlayer').src = '';
+  history.pushState(null, '', location.pathname);
+  loadVideoList();
+}
+
+function addCommentAtTime() {
+  document.getElementById('commentText').focus();
+}
+
+async function deleteCurrentVideo() {
+  if (!currentVideo) return;
+  if (!confirm(`Delete "${currentVideo.title}"? This is permanent.`)) return;
+
+  const resp = await fetch(`${WORKER_URL}/api/stream/${encodeURIComponent(currentVideo.stream_uid)}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+
+  if (resp.ok) backToList();
+  else alert('Delete failed.');
+}
+
+// ─── Comments ─────────────────────────────────────────────────────────────────
+async function loadComments(videoId) {
+  const list = document.getElementById('commentList');
+  list.innerHTML = '<p class="rv-notice" style="padding:20px">Loading…</p>';
+
+  try {
+    const resp = await fetch(`${WORKER_URL}/api/comments/${encodeURIComponent(videoId)}`);
+    commentsCache = await resp.json();
+    renderComments();
+  } catch {
+    list.innerHTML = '<p class="rv-notice" style="padding:20px">Could not load comments.</p>';
+  }
+}
+
+function renderComments() {
+  const list = document.getElementById('commentList');
+  if (!commentsCache.length) {
+    list.innerHTML = '<p class="rv-notice" style="padding:20px">No comments yet. Be the first.</p>';
+    return;
+  }
+
+  list.innerHTML = commentsCache.map(c => `
+    <div class="rv-comment" id="comment-${c.id}" onclick="seekTo(${c.timestamp_seconds})">
+      <span class="rv-comment-ts">${formatTime(c.timestamp_seconds)}</span>
+      <div class="rv-comment-author">${esc(c.author)}</div>
+      <div class="rv-comment-body">${esc(c.body)}</div>
+      ${adminToken ? `<button class="rv-comment-delete" onclick="deleteComment(event,${c.id})">Delete</button>` : ''}
+    </div>
+  `).join('');
+
+  // Show delete buttons if admin
+  if (adminToken) {
+    list.querySelectorAll('.rv-comment-delete').forEach(b => b.style.display = 'block');
+  }
+}
+
+async function submitComment() {
+  const text = document.getElementById('commentText').value.trim();
+  const author = document.getElementById('commentAuthor').value.trim() || 'Anonymous';
+
+  if (!text || !currentVideo) return;
+
+  const resp = await fetch(`${WORKER_URL}/api/comments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      video_id: currentVideo.stream_uid,
+      timestamp_seconds: currentTime,
+      author,
+      text,
+    }),
+  });
+
+  if (resp.ok) {
+    document.getElementById('commentText').value = '';
+    await loadComments(currentVideo.stream_uid);
+    // Scroll comment list to bottom
+    const list = document.getElementById('commentList');
+    const newComment = list.querySelector(`#comment-${(await resp.json()).id}`);
+    if (newComment) newComment.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+
+async function deleteComment(e, id) {
+  e.stopPropagation();
+  if (!confirm('Delete this comment?')) return;
+
+  const resp = await fetch(`${WORKER_URL}/api/comments/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+
+  if (resp.ok && currentVideo) await loadComments(currentVideo.stream_uid);
+}
+
+function seekTo(seconds) {
+  // Seek the Stream iframe via postMessage
+  document.getElementById('streamPlayer').contentWindow.postMessage(
+    { event: 'seek', seconds },
+    '*'
+  );
+  currentTime = seconds;
+  document.getElementById('timecode').textContent = formatTime(seconds);
+  document.getElementById('commentAt').textContent = 'At ' + formatTime(seconds);
+}
+
+// ─── Stream Upload ────────────────────────────────────────────────────────────
+function openUploadModal() {
+  document.getElementById('uploadModal').classList.add('open');
+  document.getElementById('modalErr').style.display = 'none';
+  document.getElementById('modalProgress').style.display = 'none';
+  document.getElementById('modalBar').style.width = '0%';
+  document.getElementById('upTitle').value = '';
+  document.getElementById('upDescription').value = '';
+  document.getElementById('upVideoFile').value = '';
+}
+function closeUploadModal() {
+  document.getElementById('uploadModal').classList.remove('open');
+}
+
+async function doStreamUpload() {
+  const title = document.getElementById('upTitle').value.trim();
+  const description = document.getElementById('upDescription').value.trim();
+  const fileInput = document.getElementById('upVideoFile');
+  const file = fileInput.files[0];
+  const errEl = document.getElementById('modalErr');
+  const btn = document.getElementById('modalUploadBtn');
+
+  errEl.style.display = 'none';
+  if (!title) { showModalErr('Enter a title.'); return; }
+  if (!file) { showModalErr('Choose a video file.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Starting…';
+
+  try {
+    // Step 1: Get TUS upload URL from Stream via Worker
+    const resp = await fetch(`${WORKER_URL}/api/stream/upload`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify({ title, description, filesize: file.size }),
+    });
+
+    if (!resp.ok) {
+      const d = await resp.json();
+      showModalErr(d.error || 'Could not start upload.');
+      return;
+    }
+
+    const { uploadUrl } = await resp.json();
+
+    // Step 2: TUS upload to Stream
+    const progressWrap = document.getElementById('modalProgress');
+    const bar = document.getElementById('modalBar');
+    const label = document.getElementById('modalLabel');
+    progressWrap.style.display = 'block';
+    btn.textContent = 'Uploading…';
+
+    await new Promise((resolve, reject) => {
+      const upload = new tus.Upload(file, {
+        endpoint: uploadUrl,
+        uploadUrl: uploadUrl,
+        retryDelays: [0, 3000, 5000],
+        metadata: { filename: file.name, filetype: file.type },
+        onProgress(loaded, total) {
+          const pct = Math.round((loaded / total) * 100);
+          bar.style.width = pct + '%';
+          label.textContent = `Uploading… ${pct}%`;
+        },
+        onSuccess() { resolve(); },
+        onError(err) { reject(err); },
+      });
+      upload.start();
+    });
+
+    label.textContent = 'Upload complete — processing may take a few minutes.';
+    btn.textContent = 'Done';
+    setTimeout(() => {
+      closeUploadModal();
+      loadVideoList();
+    }, 2000);
+
+  } catch (err) {
+    showModalErr('Upload failed: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    if (btn.textContent !== 'Done') btn.textContent = 'Upload';
+  }
+}
+
+function showModalErr(msg) {
+  const el = document.getElementById('modalErr');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+// ─── Admin Auth ───────────────────────────────────────────────────────────────
+function openAdminAuth() {
+  document.getElementById('adminAuthBg').classList.add('open');
+  document.getElementById('authPass').value = '';
+  document.getElementById('authErr').style.display = 'none';
+  setTimeout(() => document.getElementById('authPass').focus(), 100);
+}
+function closeAdminAuth() {
+  document.getElementById('adminAuthBg').classList.remove('open');
+}
+
+async function authLogin() {
+  const pass = document.getElementById('authPass').value;
+  const errEl = document.getElementById('authErr');
+  errEl.style.display = 'none';
+
+  const resp = await fetch(`${WORKER_URL}/api/transfers`, {
+    headers: { Authorization: `Bearer ${pass}` },
+  });
+
+  if (!resp.ok) {
+    errEl.textContent = 'Incorrect password.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  adminToken = pass;
+  closeAdminAuth();
+
+  // Update header to show admin controls
+  document.getElementById('headerActions').innerHTML = `
+    <button class="rv-btn rv-btn-sm" onclick="openUploadModal()">+ Upload Video</button>
+    <button class="rv-btn rv-btn-ghost rv-btn-sm" onclick="adminLogout()">Sign out</button>
+  `;
+
+  // Re-render comments with delete buttons if on player panel
+  if (currentVideo) {
+    renderComments();
+    document.getElementById('adminVideoActions').style.display = 'block';
+  }
+}
+
+function adminLogout() {
+  adminToken = null;
+  document.getElementById('headerActions').innerHTML = `
+    <button class="rv-btn rv-btn-ghost rv-btn-sm" onclick="openAdminAuth()">Admin</button>
+  `;
+  if (currentVideo) {
+    renderComments();
+    document.getElementById('adminVideoActions').style.display = 'none';
+  }
+}
+
+// ─── Utilities ────────────────────────────────────────────────────────────────
+function formatTime(secs) {
+  const s = Math.floor(secs);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  const ss = String(s % 60).padStart(2, '0');
+  const mm = String(m % 60).padStart(2, '0');
+  return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
+}
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>
