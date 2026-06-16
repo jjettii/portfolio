@@ -132,74 +132,84 @@
 }
 
 
-/* ─── Work Grid ──────────────────────────────── */
+/* ─── Photo Film Strip ───────────────────────── */
 
-.home-work {
-    padding: 0 48px;
+.home-film-strip-link {
+    display: block;
+    text-decoration: none;
 }
 
-.home-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 30px;
-}
-
-.home-video-item {
+.home-film-strip {
     position: relative;
-    aspect-ratio: 16 / 9;
     overflow: hidden;
-    cursor: pointer;
-    background: #000;
+    line-height: 0;
 }
 
-.home-video-poster,
-.home-video-preview {
+.strip-overlay {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.38);
+    line-height: 1.2;
+    padding: 0 40px;
 }
 
-.home-video-poster {
-    z-index: 2;
-    transition: opacity 0.6s ease;
-}
-
-.home-video-preview {
-    z-index: 1;
-}
-
-.home-video-item.playing .home-video-poster {
-    opacity: 0;
-}
-
-.home-video-overlay {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 28px 24px 24px;
-    background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 100%);
-    z-index: 3;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.home-video-item:hover .home-video-overlay,
-.home-video-item.playing .home-video-overlay {
-    opacity: 1;
-}
-
-.home-video-overlay h3 {
-    color: #fff;
-    font-size: 15px;
+.strip-overlay-sub {
+    font-family: 'AkzidenzGrotesk', sans-serif;
     font-weight: 300;
-    letter-spacing: 0.02em;
+    font-size: clamp(11px, 1.28vw, 16px);
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.85);
+    text-transform: uppercase;
+    line-height: 1;
+    margin-bottom: 16px;
+}
+
+.strip-overlay-title {
+    font-family: 'AkzidenzGrotesk', sans-serif;
+    font-weight: 700;
+    font-size: clamp(29px, 4.4vw, 58px);
+    letter-spacing: -0.02em;
+    color: #fff;
+    line-height: 1.1;
     margin: 0;
 }
+
+.strip-row {
+    height: 240px;
+    overflow: hidden;
+}
+
+.strip-track {
+    display: flex;
+    height: 100%;
+    width: max-content;
+    will-change: transform;
+}
+
+.strip-track img {
+    height: 100%;
+    width: auto;
+    display: block;
+    flex-shrink: 0;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+@keyframes strip-scroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+}
+
+.strip-row--1 .strip-track { animation: strip-scroll 999s linear infinite; animation-play-state: paused; }
+.strip-row--2 .strip-track { animation: strip-scroll 999s linear infinite; animation-play-state: paused; }
+.strip-row--3 .strip-track { animation: strip-scroll 999s linear infinite; animation-play-state: paused; }
 
 
 /* ─── CTA Strip ──────────────────────────────── */
@@ -334,13 +344,8 @@
         padding: 80px 28px;
     }
 
-    .home-work {
-        padding: 0 24px;
-    }
-
-    .home-grid {
-        grid-template-columns: 1fr;
-        gap: 20px;
+    .strip-row {
+        height: 160px;
     }
 
     .home-cta {
