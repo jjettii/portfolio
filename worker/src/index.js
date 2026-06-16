@@ -486,6 +486,85 @@ async function handleTransferAddFile(request, env, id) {
   return json({ uploadUrl });
 }
 
+// ─── Multipart Upload Handlers ───────────────────────────────────────────────
+
+async function handleMultipartCreate(request, env) {
+  const denied = requireAdmin(request, env);
+  if (denied) return denied;
+
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
+
+  const { key } = body;
+  if (!key) return json({ error: 'key is required' }, 400);
+
+  const mpu = await env.BUCKET.createMultipartUpload(key);
+  return json({ uploadId: mpu.uploadId, key: mpu.key });
+}
+
+async function handleMultipartPresignPart(request, env) {
+  const denied = requireAdmin(request, env);
+  if (denied) return denied;
+
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
+
+  const { key, uploadId, partNumber } = body;
+  if (!key || !uploadId || partNumber == null) return json({ error: 'key, uploadId, and partNumber are required' }, 400);
+
+  const client = new AwsClient({
+    accessKeyId: env.R2_ACCESS_KEY_ID,
+    secretAccessKey: env.R2_SECRET_ACCESS_KEY,
+    service: 's3',
+    region: 'auto',
+  });
+
+  const url = new URL(
+    `https://${env.CF_ACCOUNT_ID}.r2.cloudflarestorage.com/${env.R2_BUCKET_NAME}/${key}`
+  );
+  url.searchParams.set('X-Amz-Expires', String(UPLOAD_EXPIRY));
+  url.searchParams.set('partNumber', String(partNumber));
+  url.searchParams.set('uploadId', uploadId);
+
+  const signed = await client.sign(new Request(url.toString(), { method: 'PUT' }), {
+    aws: { signQuery: true, allHeaders: true },
+  });
+
+  return json({ url: signed.url });
+}
+
+async function handleMultipartComplete(request, env) {
+  const denied = requireAdmin(request, env);
+  if (denied) return denied;
+
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
+
+  const { key, uploadId, parts } = body;
+  if (!key || !uploadId || !Array.isArray(parts)) return json({ error: 'key, uploadId, and parts are required' }, 400);
+
+  const mpu = env.BUCKET.resumeMultipartUpload(key, uploadId);
+  await mpu.complete(parts);
+
+  return json({ ok: true });
+}
+
+async function handleMultipartAbort(request, env) {
+  const denied = requireAdmin(request, env);
+  if (denied) return denied;
+
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
+
+  const { key, uploadId } = body;
+  if (!key || !uploadId) return json({ error: 'key and uploadId are required' }, 400);
+
+  const mpu = env.BUCKET.resumeMultipartUpload(key, uploadId);
+  await mpu.abort();
+
+  return json({ ok: true });
+}
+
 // ─── Review Handlers ─────────────────────────────────────────────────────────
 
 async function handleReviewCreate(request, env) {
@@ -769,6 +848,18 @@ export default {
       }
       if (pathname === '/api/transfer/create-multi' && method === 'POST') {
         return handleTransferCreateMulti(request, env);
+      }
+      if (pathname === '/api/transfer/multipart/create' && method === 'POST') {
+        return handleMultipartCreate(request, env);
+      }
+      if (pathname === '/api/transfer/multipart/presign-part' && method === 'POST') {
+        return handleMultipartPresignPart(request, env);
+      }
+      if (pathname === '/api/transfer/multipart/complete' && method === 'POST') {
+        return handleMultipartComplete(request, env);
+      }
+      if (pathname === '/api/transfer/multipart/abort' && method === 'POST') {
+        return handleMultipartAbort(request, env);
       }
       if (pathname === '/api/transfers' && method === 'GET') {
         return handleTransferList(request, env);

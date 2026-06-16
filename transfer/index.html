@@ -486,6 +486,8 @@
 <script>
 // ─── Config ──────────────────────────────────────────────────────────────────
 const WORKER_URL = 'https://portfolio-worker.jordanettinger.workers.dev';
+const MULTIPART_THRESHOLD = 5 * 1e9; // 5 GB — files above this use multipart upload
+const PART_SIZE = 64 * 1024 * 1024;  // 64 MB per part
 
 // ─── State ───────────────────────────────────────────────────────────────────
 let adminToken = null;
@@ -954,7 +956,8 @@ async function doAddFiles() {
       }
 
       const { uploadUrl } = await addResp.json();
-      await uploadWithProgress(uploadUrl, file, (pct) => {
+      const r2Key = `transfers/${currentDetailId}/${path}`;
+      await uploadWithProgress(file.size > MULTIPART_THRESHOLD ? r2Key : uploadUrl, file, (pct) => {
         bar.style.width = Math.round(((i + pct / 100) / detailChosenFiles.length) * 100) + '%';
       });
     }
@@ -1142,8 +1145,9 @@ async function doSingleUpload(pass, desc, bar, label, errEl) {
   }
 
   const { id, uploadUrl } = await createResp.json();
+  const r2Key = `transfers/${id}/${file.name}`;
 
-  await uploadWithProgress(uploadUrl, file, (pct) => {
+  await uploadWithProgress(file.size > MULTIPART_THRESHOLD ? r2Key : uploadUrl, file, (pct) => {
     bar.style.width = pct + '%';
     label.textContent = `Uploading… ${pct}%`;
   });
@@ -1183,8 +1187,9 @@ async function doMultiUpload(pass, desc, bar, label) {
     }
 
     const { uploadUrl } = await addResp.json();
+    const r2Key = `transfers/${id}/${path}`;
 
-    await uploadWithProgress(uploadUrl, file, (pct) => {
+    await uploadWithProgress(file.size > MULTIPART_THRESHOLD ? r2Key : uploadUrl, file, (pct) => {
       bar.style.width = Math.round(((i + pct / 100) / chosenFiles.length) * 100) + '%';
     });
   }
@@ -1193,18 +1198,89 @@ async function doMultiUpload(pass, desc, bar, label) {
   return id;
 }
 
-function uploadWithProgress(url, file, onProgress) {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('PUT', url);
-    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
-    };
-    xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`HTTP ${xhr.status}`));
-    xhr.onerror = () => reject(new Error('Network error'));
-    xhr.send(file);
+async function uploadWithProgress(urlOrKey, file, onProgress) {
+  if (file.size <= MULTIPART_THRESHOLD) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', urlOrKey);
+      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+      xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`HTTP ${xhr.status}`));
+      xhr.onerror = () => reject(new Error('Network error'));
+      xhr.send(file);
+    });
+  }
+
+  // Multipart path for files > 5 GB; urlOrKey is the R2 object key
+  const key = urlOrKey;
+  const createResp = await fetch(`${WORKER_URL}/api/transfer/multipart/create`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+    body: JSON.stringify({ key }),
   });
+  if (!createResp.ok) throw new Error('Failed to initiate multipart upload');
+  const { uploadId } = await createResp.json();
+
+  const parts = [];
+  const totalParts = Math.ceil(file.size / PART_SIZE);
+  let uploadedBytes = 0;
+
+  try {
+    for (let partNumber = 1; partNumber <= totalParts; partNumber++) {
+      const start = (partNumber - 1) * PART_SIZE;
+      const end = Math.min(start + PART_SIZE, file.size);
+      const chunk = file.slice(start, end);
+
+      const presignResp = await fetch(`${WORKER_URL}/api/transfer/multipart/presign-part`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ key, uploadId, partNumber }),
+      });
+      if (!presignResp.ok) throw new Error(`Failed to presign part ${partNumber}`);
+      const { url } = await presignResp.json();
+
+      const etag = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', url);
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            onProgress(Math.round((uploadedBytes + e.loaded) / file.size * 100));
+          }
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(xhr.getResponseHeader('ETag'));
+          } else {
+            reject(new Error(`HTTP ${xhr.status}`));
+          }
+        };
+        xhr.onerror = () => reject(new Error('Network error'));
+        xhr.send(chunk);
+      });
+
+      if (!etag) throw new Error(`No ETag returned for part ${partNumber} — ensure your R2 bucket CORS policy exposes the ETag header`);
+      uploadedBytes += end - start;
+      parts.push({ partNumber, etag });
+    }
+
+    const completeResp = await fetch(`${WORKER_URL}/api/transfer/multipart/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({ key, uploadId, parts }),
+    });
+    if (!completeResp.ok) throw new Error('Failed to complete multipart upload');
+
+    onProgress(100);
+  } catch (err) {
+    fetch(`${WORKER_URL}/api/transfer/multipart/abort`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({ key, uploadId }),
+    }).catch(() => {});
+    throw err;
+  }
 }
 
 function copyShareUrl() {
