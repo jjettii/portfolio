@@ -47,69 +47,21 @@
     <!-- Intro Text -->
     <section class="home-intro fade-in">
         <p class="home-intro-tagline">Narrative-driven video production for the design and creative community.</p>
-        <p class="home-intro-body">Based on Vancouver Island, I work with architects, developers, hospitality brands, and creative studios to make films that hold up next to the work they're proud of. <br> Clean, considered, and built to last.</p>
+        <p class="home-intro-body">Based on Vancouver Island, I work with designers, architects, outdoor + hospitality brands, and creative studios to make films that hold up next to the work they're proud of. <br> Clean, considered, and built to last.</p>
     </section>
 
-    <!-- Featured Work -->
-    <section class="home-work">
-        <div class="home-grid">
-
-            <div class="home-video-item fade-in fade-in-delay-1" data-video-id="havn">
-                <img src="assets/img/havn.webp" alt="HAVN Saunas" class="home-video-poster">
-                <video class="home-video-preview" muted loop preload="auto" playsinline>
-                    <source src="assets/webm/havn.webm" type="video/webm">
-                    <source src="assets/mp4/havn.mp4" type="video/mp4">
-                </video>
-                <div class="home-video-overlay"><h3>HAVN Saunas</h3></div>
+    <!-- Photo Film Strip -->
+    <a href="portfolio.html" class="home-film-strip-link">
+        <section class="home-film-strip">
+            <div class="strip-overlay">
+                <p class="strip-overlay-sub">Commercial&nbsp;·&nbsp;Lifestyle&nbsp;·&nbsp;Documentary</p>
+                <h2 class="strip-overlay-title">View Portfolio</h2>
             </div>
-
-            <div class="home-video-item fade-in fade-in-delay-2" data-video-id="lightwater-cove">
-                <img src="assets/img/lightwater.webp" alt="Lightwater Cove" class="home-video-poster">
-                <video class="home-video-preview" muted loop preload="auto" playsinline>
-                    <source src="assets/webm/lightwater-cove.webm" type="video/webm">
-                    <source src="assets/mp4/lightwater-cove.mp4" type="video/mp4">
-                </video>
-                <div class="home-video-overlay"><h3>Lightwater Cove</h3></div>
-            </div>
-
-            <div class="home-video-item fade-in fade-in-delay-3" data-video-id="kwench">
-                <img src="assets/img/kwench.webp" alt="Kwench Work + Culture Club" class="home-video-poster">
-                <video class="home-video-preview" muted loop preload="auto" playsinline>
-                    <source src="assets/webm/kwench.webm" type="video/webm">
-                    <source src="assets/mp4/kwench.mp4" type="video/mp4">
-                </video>
-                <div class="home-video-overlay"><h3>Kwench Work + Culture Club</h3></div>
-            </div>
-
-            <div class="home-video-item fade-in fade-in-delay-4" data-video-id="arcteryx">
-                <img src="assets/img/arcteryx.webp" alt="Arc'teryx" class="home-video-poster">
-                <video class="home-video-preview" muted loop preload="auto" playsinline>
-                    <source src="assets/webm/arcteryx.webm" type="video/webm">
-                    <source src="assets/mp4/arcteryx.mp4" type="video/mp4">
-                </video>
-                <div class="home-video-overlay"><h3>Arc'teryx</h3></div>
-            </div>
-
-            <div class="home-video-item fade-in fade-in-delay-5" data-video-id="anian">
-                <img src="assets/img/anian.webp" alt="ANIÁN" class="home-video-poster">
-                <video class="home-video-preview" muted loop preload="auto" playsinline>
-                    <source src="assets/webm/anian.webm" type="video/webm">
-                    <source src="assets/mp4/anian.mp4" type="video/mp4">
-                </video>
-                <div class="home-video-overlay"><h3>ANIÁN</h3></div>
-            </div>
-
-            <div class="home-video-item fade-in fade-in-delay-6" data-video-id="villamar">
-                <img src="assets/img/villamar.webp" alt="Villamar" class="home-video-poster">
-                <video class="home-video-preview" muted loop preload="auto" playsinline>
-                    <source src="assets/webm/villamar.webm" type="video/webm">
-                    <source src="assets/mp4/villamar.mp4" type="video/mp4">
-                </video>
-                <div class="home-video-overlay"><h3>Villamar</h3></div>
-            </div>
-
-        </div>
-    </section>
+            <div class="strip-row strip-row--1"><div class="strip-track"></div></div>
+            <div class="strip-row strip-row--2"><div class="strip-track"></div></div>
+            <div class="strip-row strip-row--3"><div class="strip-track"></div></div>
+        </section>
+    </a>
 
     <!-- CTA -->
     <section class="home-cta fade-in">
@@ -166,62 +118,148 @@
 
         fadeEls.forEach(function (el) { observer.observe(el); });
 
-        // ─── Video hover previews ─────────────────────
-        const projectPages = {
-            'havn':           'projects/havn.html',
-            'lightwater-cove':'projects/lightwater-cove.html',
-            'kwench':         'projects/kwench.html',
-            'arcteryx':       'projects/arcteryx.html',
-            'anian':          'projects/anian.html',
-            'villamar':       'projects/villamar.html'
-        };
+        // ─── Film strip: shuffle, populate, calibrate speed ──
+        (function () {
+            // Target px/s for each row — consistent regardless of image mix
+            var speeds = [30, 70, 50];
 
-        const videoItems = document.querySelectorAll('.home-video-item');
-        let currentlyPlaying = null;
-        let touchStarted = false;
+            var imgs = [
+                'assets/img/anian/anian-still-001.webp',
+                'assets/img/anian/anian-still-002.webp',
+                'assets/img/anian/anian-still-003.webp',
+                'assets/img/anian/anian-still-004.webp',
+                'assets/img/bracelayer/bracelayer-1.webp',
+                'assets/img/bracelayer/bracelayer-2.webp',
+                'assets/img/bracelayer/bracelayer-3.webp',
+                'assets/img/bracelayer/bracelayer-4.webp',
+                'assets/img/den/den-1.webp',
+                'assets/img/den/den-2.webp',
+                'assets/img/den/den-3.webp',
+                'assets/img/den/den-4.webp',
+                'assets/img/den/den-5.webp',
+                'assets/img/den/den-6.webp',
+                'assets/img/edible-underwear/edible-underwear-1.webp',
+                'assets/img/edible-underwear/edible-underwear-2.webp',
+                'assets/img/edible-underwear/edible-underwear-3.webp',
+                'assets/img/edible-underwear/edible-underwear-4.webp',
+                'assets/img/green-acres/green-acres-1.webp',
+                'assets/img/green-acres/green-acres-2.webp',
+                'assets/img/green-acres/green-acres-3.webp',
+                'assets/img/green-acres/green-acres-4.webp',
+                'assets/img/havn/ambient-1.webp',
+                'assets/img/havn/ambient-2.webp',
+                'assets/img/havn/ambient-3.webp',
+                'assets/img/havn/ambient-4.webp',
+                'assets/img/havn/into-the-steam-1.webp',
+                'assets/img/havn/into-the-steam-2.webp',
+                'assets/img/havn/into-the-steam-3.webp',
+                'assets/img/havn/into-the-steam-4.webp',
+                'assets/img/itl/itl-1.webp',
+                'assets/img/itl/itl-2.webp',
+                'assets/img/itl/itl-3.webp',
+                'assets/img/itl/itl-4.webp',
+                'assets/img/itl/itl-5.webp',
+                'assets/img/itl/itl-6.webp',
+                'assets/img/kwench/kwench-1.webp',
+                'assets/img/kwench/kwench-2.webp',
+                'assets/img/kwench/kwench-3.webp',
+                'assets/img/kwench/kwench-4.webp',
+                'assets/img/kwench/kwench-web-1.webp',
+                'assets/img/kwench/kwench-web-2.webp',
+                'assets/img/lightwater/lightwater-cove-1.webp',
+                'assets/img/lightwater/lightwater-cove-2.webp',
+                'assets/img/lightwater/lightwater-cove-3.webp',
+                'assets/img/lightwater/lightwater-cove-4.webp',
+                'assets/img/lightwater/lightwater-cove-5.webp',
+                'assets/img/lightwater/lightwater-cove-6.webp',
+                'assets/img/lightwater/lightwater-cove-7.webp',
+                'assets/img/lightwater/lightwater-cove-8.webp',
+                'assets/img/plr/plr-1.webp',
+                'assets/img/plr/plr-2.webp',
+                'assets/img/plr/plr-3.webp',
+                'assets/img/plr/plr-4.webp',
+                'assets/img/plr/plr-5.webp',
+                'assets/img/plr/plr-6.webp',
+                'assets/img/somedays/somedays-1.webp',
+                'assets/img/somedays/somedays-2.webp',
+                'assets/img/somedays/somedays-3.webp',
+                'assets/img/somedays/somedays-4.webp',
+                'assets/img/somedays/somedays-5.webp',
+                'assets/img/somedays/somedays-6.webp',
+                'assets/img/the-run/the-run-1.webp',
+                'assets/img/the-run/the-run-2.webp',
+                'assets/img/the-run/the-run-3.webp',
+                'assets/img/the-run/the-run-4.webp',
+                'assets/img/too-much/too-much-1.webp',
+                'assets/img/too-much/too-much-2.webp',
+                'assets/img/too-much/too-much-3.webp',
+                'assets/img/too-much/too-much-4.webp',
+                'assets/img/too-much/too-much-5.webp',
+                'assets/img/too-much/too-much-6.webp',
+                'assets/img/villamar/villamar-1.webp',
+                'assets/img/villamar/villamar-2.webp',
+                'assets/img/villamar/villamar-3.webp',
+                'assets/img/villamar/villamar-4.webp',
+                'assets/img/villamar/villamar-5.webp',
+                'assets/img/villamar/villamar-6.webp',
+                'assets/img/whistlebuoy/whistlebuoy-1.webp',
+                'assets/img/whistlebuoy/whistlebuoy-2.webp',
+                'assets/img/whistlebuoy/whistlebuoy-3.webp',
+                'assets/img/whistlebuoy/whistlebuoy-4.webp'
+            ];
 
-        videoItems.forEach(function (item) {
-            const video = item.querySelector('.home-video-preview');
-            const videoId = item.dataset.videoId;
+            // Fisher-Yates shuffle
+            for (var i = imgs.length - 1; i > 0; i--) {
+                var j = Math.floor(Math.random() * (i + 1));
+                var t = imgs[i]; imgs[i] = imgs[j]; imgs[j] = t;
+            }
 
-            item.addEventListener('mouseenter', function () {
-                if (!touchStarted) {
-                    video.play().catch(function () {});
-                    item.classList.add('playing');
-                }
+            var tracks = document.querySelectorAll('.strip-track');
+
+            // Distribute images round-robin across rows
+            imgs.forEach(function (src, idx) {
+                var img = document.createElement('img');
+                img.src = src;
+                img.alt = '';
+                tracks[idx % tracks.length].appendChild(img);
             });
 
-            item.addEventListener('mouseleave', function () {
-                if (!touchStarted) {
-                    video.pause();
-                    video.currentTime = 0;
-                    item.classList.remove('playing');
-                }
+            // Clone each track for seamless loop
+            tracks.forEach(function (track) {
+                Array.from(track.children).forEach(function (img) {
+                    var clone = img.cloneNode(true);
+                    clone.setAttribute('aria-hidden', 'true');
+                    track.appendChild(clone);
+                });
             });
 
-            item.addEventListener('click', function (e) {
-                e.preventDefault();
-                if (!item.classList.contains('playing')) {
-                    if (currentlyPlaying && currentlyPlaying !== item) {
-                        const prev = currentlyPlaying.querySelector('.home-video-preview');
-                        prev.pause();
-                        prev.currentTime = 0;
-                        currentlyPlaying.classList.remove('playing');
-                    }
-                    video.load();
-                    video.play().catch(function () {});
-                    item.classList.add('playing');
-                    currentlyPlaying = item;
-                } else {
-                    const target = projectPages[videoId];
-                    if (target) window.location.href = target;
-                }
-            });
+            // Calibrate: set duration so pixel speed is consistent regardless of image mix
+            var calibrated = false;
+            function calibrate() {
+                if (calibrated) return;
+                calibrated = true;
+                tracks.forEach(function (track, i) {
+                    var halfWidth = track.scrollWidth / 2;
+                    var duration = halfWidth / speeds[i];
+                    track.style.animationDuration = duration + 's';
+                    track.style.animationPlayState = 'running';
+                });
+            }
 
-            item.addEventListener('touchstart', function () {
-                touchStarted = true;
-            }, { passive: true });
-        });
+            // Fire once all first-set images report loaded (or errored)
+            var firstImgs = [];
+            tracks.forEach(function (track) {
+                var half = track.children.length / 2;
+                for (var i = 0; i < half; i++) firstImgs.push(track.children[i]);
+            });
+            var pending = firstImgs.length;
+            function onLoad() { if (--pending <= 0) calibrate(); }
+            firstImgs.forEach(function (img) {
+                if (img.complete) { onLoad(); }
+                else { img.addEventListener('load', onLoad); img.addEventListener('error', onLoad); }
+            });
+            setTimeout(calibrate, 4000); // fallback if images stall
+        }());
     </script>
 
 </body>

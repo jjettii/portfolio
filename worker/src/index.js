@@ -543,8 +543,19 @@ async function handleMultipartComplete(request, env) {
   const { key, uploadId, parts } = body;
   if (!key || !uploadId || !Array.isArray(parts)) return json({ error: 'key, uploadId, and parts are required' }, 400);
 
-  const mpu = env.BUCKET.resumeMultipartUpload(key, uploadId);
-  await mpu.complete(parts);
+  // R2 requires partNumber as integer and etag without surrounding quotes
+  const sanitizedParts = parts.map(p => ({
+    partNumber: Number(p.partNumber),
+    etag: String(p.etag).replace(/^"|"$/g, ''),
+  }));
+
+  try {
+    const mpu = env.BUCKET.resumeMultipartUpload(key, uploadId);
+    await mpu.complete(sanitizedParts);
+  } catch (err) {
+    console.error('multipart complete failed:', err);
+    return json({ error: err.message || 'Failed to complete multipart upload' }, 500);
+  }
 
   return json({ ok: true });
 }
@@ -844,25 +855,25 @@ export default {
 
       // ── Transfers ──
       if (pathname === '/api/transfer/create' && method === 'POST') {
-        return handleTransferCreate(request, env);
+        return await handleTransferCreate(request, env);
       }
       if (pathname === '/api/transfer/create-multi' && method === 'POST') {
-        return handleTransferCreateMulti(request, env);
+        return await handleTransferCreateMulti(request, env);
       }
       if (pathname === '/api/transfer/multipart/create' && method === 'POST') {
-        return handleMultipartCreate(request, env);
+        return await handleMultipartCreate(request, env);
       }
       if (pathname === '/api/transfer/multipart/presign-part' && method === 'POST') {
-        return handleMultipartPresignPart(request, env);
+        return await handleMultipartPresignPart(request, env);
       }
       if (pathname === '/api/transfer/multipart/complete' && method === 'POST') {
-        return handleMultipartComplete(request, env);
+        return await handleMultipartComplete(request, env);
       }
       if (pathname === '/api/transfer/multipart/abort' && method === 'POST') {
-        return handleMultipartAbort(request, env);
+        return await handleMultipartAbort(request, env);
       }
       if (pathname === '/api/transfers' && method === 'GET') {
-        return handleTransferList(request, env);
+        return await handleTransferList(request, env);
       }
 
       const xferMatch = pathname.match(/^\/api\/transfer\/([^/]+)(\/download)?$/);
@@ -870,39 +881,39 @@ export default {
         const [, id, sub] = xferMatch;
         if (method === 'GET') {
           return sub === '/download'
-            ? handleTransferDownload(request, env, id)
-            : handleTransferInfo(request, env, id);
+            ? await handleTransferDownload(request, env, id)
+            : await handleTransferInfo(request, env, id);
         }
-        if (method === 'PATCH') return handleTransferUpdate(request, env, id);
-        if (method === 'DELETE') return handleTransferDelete(request, env, id);
+        if (method === 'PATCH') return await handleTransferUpdate(request, env, id);
+        if (method === 'DELETE') return await handleTransferDelete(request, env, id);
       }
 
       const xferFileMatch = pathname.match(/^\/api\/transfer\/([^/]+)\/add-file$/);
       if (xferFileMatch && method === 'POST') {
-        return handleTransferAddFile(request, env, xferFileMatch[1]);
+        return await handleTransferAddFile(request, env, xferFileMatch[1]);
       }
 
       const xferSingleFileDeleteMatch = pathname.match(/^\/api\/transfer\/([^/]+)\/file$/);
       if (xferSingleFileDeleteMatch && method === 'DELETE') {
-        return handleTransferFileDelete(request, env, xferSingleFileDeleteMatch[1]);
+        return await handleTransferFileDelete(request, env, xferSingleFileDeleteMatch[1]);
       }
 
       const xferCrcMatch = pathname.match(/^\/api\/transfer\/([^/]+)\/file-crc$/);
       if (xferCrcMatch && method === 'PATCH') {
-        return handleTransferFileCrc(request, env, xferCrcMatch[1]);
+        return await handleTransferFileCrc(request, env, xferCrcMatch[1]);
       }
 
       const xferFilesListMatch = pathname.match(/^\/api\/transfer\/([^/]+)\/files$/);
       if (xferFilesListMatch && method === 'GET') {
-        return handleTransferFileList(request, env, xferFilesListMatch[1]);
+        return await handleTransferFileList(request, env, xferFilesListMatch[1]);
       }
 
       // ── Reviews ──
       if (pathname === '/api/review/create' && method === 'POST') {
-        return handleReviewCreate(request, env);
+        return await handleReviewCreate(request, env);
       }
       if (pathname === '/api/reviews' && method === 'GET') {
-        return handleReviewList(request, env);
+        return await handleReviewList(request, env);
       }
 
       const reviewMatch = pathname.match(/^\/api\/review\/([^/]+)(\/videos)?$/);
@@ -910,37 +921,37 @@ export default {
         const [, rid, sub] = reviewMatch;
         if (method === 'GET') {
           return sub === '/videos'
-            ? handleReviewVideos(request, env, rid)
-            : handleReviewInfo(request, env, rid);
+            ? await handleReviewVideos(request, env, rid)
+            : await handleReviewInfo(request, env, rid);
         }
-        if (method === 'PATCH') return handleReviewUpdate(request, env, rid);
-        if (method === 'DELETE') return handleReviewDelete(request, env, rid);
+        if (method === 'PATCH') return await handleReviewUpdate(request, env, rid);
+        if (method === 'DELETE') return await handleReviewDelete(request, env, rid);
       }
 
       // ── Stream ──
       if (pathname === '/api/stream/upload' && method === 'POST') {
-        return handleStreamUploadCreate(request, env);
+        return await handleStreamUploadCreate(request, env);
       }
       if (pathname === '/api/stream/videos' && method === 'GET') {
-        return handleStreamVideoList(request, env);
+        return await handleStreamVideoList(request, env);
       }
 
       const streamMatch = pathname.match(/^\/api\/stream\/([^/]+)$/);
       if (streamMatch) {
-        if (method === 'PATCH') return handleStreamVideoUpdate(request, env, streamMatch[1]);
-        if (method === 'DELETE') return handleStreamVideoDelete(request, env, streamMatch[1]);
+        if (method === 'PATCH') return await handleStreamVideoUpdate(request, env, streamMatch[1]);
+        if (method === 'DELETE') return await handleStreamVideoDelete(request, env, streamMatch[1]);
       }
 
       // ── Comments ──
       if (pathname === '/api/comments' && method === 'POST') {
-        return handleCommentCreate(request, env);
+        return await handleCommentCreate(request, env);
       }
 
       const commentMatch = pathname.match(/^\/api\/comments\/([^/]+)$/);
       if (commentMatch) {
         const id = commentMatch[1];
-        if (method === 'GET') return handleCommentList(request, env, id);
-        if (method === 'DELETE') return handleCommentDelete(request, env, id);
+        if (method === 'GET') return await handleCommentList(request, env, id);
+        if (method === 'DELETE') return await handleCommentDelete(request, env, id);
       }
 
       return json({ error: 'Not found' }, 404);

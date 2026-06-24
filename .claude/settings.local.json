@@ -13,7 +13,12 @@
       "Bash(wrangler d1 *)",
       "Bash(wrangler secret *)",
       "Bash(npm install *)",
-      "Bash(wrangler deploy *)"
+      "Bash(wrangler deploy *)",
+      "Bash(npm run:*)",
+      "Read(//usr/local/bin/**)",
+      "Read(//Users/jettinger/.nvm/versions/**)",
+      "Bash(export PATH=\"$PATH:/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin\")",
+      "Read(//opt/homebrew/bin/**)"
     ]
   }
 }
