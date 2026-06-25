@@ -1,10 +1,16 @@
-<!doctype html>
+  <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Proposal — UBC Properties Trust — [Team Name]</title>
 <meta name="description" content="Video and photography for UBC Properties Trust. Prepared for The Storytelling Collective." />
+<meta property="og:title" content="Proposal — UBC Properties Trust" />
+<meta property="og:description" content="Video and photography for UBC Properties Trust. Prepared for The Storytelling Collective." />
+<meta property="og:image" content="https://jordanettinger.com/ubc-proposal/charles/photo/2-autostrada/50_IMAGE_AUTOSTRADA_SOCIAL-CLIPS_25-04-30_CHARLESRNASBY.webp" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://jordanettinger.com/ubc-proposal/charles/photo/2-autostrada/50_IMAGE_AUTOSTRADA_SOCIAL-CLIPS_25-04-30_CHARLESRNASBY.webp" />
 <style>
   @font-face {
     font-family: 'AkzidenzGrotesk';
@@ -108,8 +114,8 @@
   .whead{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;}
   .wname{font-weight:700;font-size:clamp(1.3rem,2.4vw,1.8rem);letter-spacing:-0.018em;}
   .wrole{font-size:clamp(14px,1.6vw,20px);font-weight:300;letter-spacing:0.08em;text-transform:uppercase;color:var(--grey-2);}
-  .media-label{font-size:clamp(14px,1.6vw,20px);font-weight:300;letter-spacing:0.08em;text-transform:uppercase;
-    color:var(--grey-2);margin:clamp(22px,3vw,30px) 0 10px;}
+  .media-label{font-size:clamp(12px,1.3vw,16px);font-weight:700;letter-spacing:0.08em;text-transform:capitalize;
+    color:var(--ink);margin:clamp(22px,3vw,30px) 0 10px;}
   .vgrid{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));}
   .pgrid{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));}
   @media(max-width:680px){
@@ -121,6 +127,7 @@
   .masonry .frame{break-inside:avoid;margin-bottom:8px;aspect-ratio:unset;background:none;}
   .masonry .frame img{width:100%;height:auto;display:block;}
   @media(max-width:680px){.masonry{columns:2;}}
+  .masonry.in .frame{opacity:1;transform:none;}
 
   /* ============================================================
      LISTS / FACTS
@@ -174,12 +181,42 @@
      TEAM
      ============================================================ */
   .credits{border-top:1px solid var(--ink);margin-top:clamp(28px,4vw,44px);}
-  .credit{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:baseline;
-    padding:22px 0;border-bottom:1px solid var(--line);}
+  .credit-wrap{border-bottom:1px solid var(--line);}
+  .credit{display:grid;grid-template-columns:28px 1fr auto;gap:18px;align-items:baseline;
+    padding:22px 0 22px;}
+  .credit.no-toggle{grid-template-columns:1fr auto;padding-left:46px;}
   .credit .nm{font-weight:700;font-size:clamp(1.2rem,2.2vw,1.6rem);letter-spacing:-0.015em;}
   .credit .nm .tbd{color:var(--grey-2);}
   .person-url{display:block;font-size:12px;font-weight:300;letter-spacing:0.04em;color:var(--grey-2);margin-top:1px;text-decoration:none;}
   .credit .rl{font-size:clamp(14px,1.6vw,20px);font-weight:300;letter-spacing:0.08em;text-transform:uppercase;color:var(--grey-2);}
+  .bio-toggle{
+    background:none;border:none;padding:0;cursor:pointer;
+    font-family:var(--sans);font-size:clamp(1.2rem,2.2vw,1.6rem);font-weight:300;
+    color:var(--grey-2);line-height:1;
+    transition:color .15s, opacity .12s;
+    align-self:baseline;
+    user-select:none;
+  }
+  .bio-toggle:hover{color:var(--ink);}
+  .bio-toggle[aria-expanded="true"]{color:var(--ink);}
+  .bio-panel{
+    display:grid;
+    grid-template-rows:0fr;
+    transition:grid-template-rows .35s cubic-bezier(.4,0,.2,1);
+  }
+  .bio-panel.open{grid-template-rows:1fr;}
+  .bio-inner{overflow:hidden;}
+  .bio-inner p{
+    margin:0;
+    padding:0 0 26px 46px;
+    font-size:clamp(.88rem,1.3vw,1rem);
+    line-height:1.65;
+    color:var(--grey);
+    max-width:64ch;
+    opacity:0;
+    transition:opacity .22s ease .1s;
+  }
+  .bio-panel.open .bio-inner p{opacity:1;}
 
   /* ============================================================
      BUDGET
@@ -377,8 +414,8 @@
 <section class="section topline">
   <div class="inner">
     <div class="seclabel rev"><span class="n">04</span><span class="t">Schedule</span></div>
-    <h2 class="h2 rev" style="max-width:24ch;">Four days, clustered by audience, location, and light</h2>
-    <p class="lede grey rev" data-d="1" style="max-width:56ch;margin-top:22px;">A working order, finalised after the July location scout and permit confirmation. Academic-building access and weather drive the sequence.</p>
+    <h2 class="h2 rev" style="max-width:24ch;">Four days, organized by people and place</h2>
+    <p class="lede grey rev" data-d="1" style="max-width:56ch;margin-top:22px;">A working order, finalised after the July location scout and permit confirmation. Academic-building access and weather determines the sequence.</p>
 
     <div class="days rev" data-d="1">
       <div class="day"><span class="dl">Day 01</span><h3 class="h3">Students</h3>
@@ -403,10 +440,38 @@
     <h2 class="h2 rev" style="max-width:18ch;">A small, senior crew</h2>
 
     <div class="credits">
-      <div class="credit rev"><span class="nm">Jordan Ettinger</span><span class="rl">Director</span></div>
-      <div class="credit rev" data-d="1"><span class="nm">Ben Giesbrecht</span><span class="rl">Cinematographer</span></div>
-      <div class="credit rev" data-d="2"><span class="nm">Charles Nasby</span><span class="rl">Photographer</span></div>
-      <div class="credit rev" data-d="3"><span class="nm"><span class="tbd">To Be Determined</span></span><span class="rl">Producer</span></div>
+      <div class="credit-wrap rev">
+        <div class="credit">
+          <button class="bio-toggle" aria-expanded="false" aria-controls="bio-jordan">+</button>
+          <span class="nm">Jordan Ettinger</span><span class="rl">Director</span>
+        </div>
+        <div class="bio-panel" id="bio-jordan" role="region">
+          <div class="bio-inner"><p>Jordan Ettinger is a director and video producer based on Vancouver Island, BC. He has been making videos for twenty years and has worked full-time in production since 2021, completing more than 150 projects across documentary, outdoor, sports, e-commerce, and luxury — collaborating with studios, independent brands, and individual clients across Western Canada and beyond.<br><br>His foundation is in narrative filmmaking. He got his start making short films and skateboarding videos, where he developed an instinct for pacing, movement, and how the shape of a story changes what a viewer feels. That sensibility carries directly into his client work today. His focus is production for the design and creative community — designers, architects, outdoor and hospitality brands, and creative studios who need films that hold up next to the work they're proud of. The result is content that is clean, considered, and built to last.</p></div>
+        </div>
+      </div>
+      <div class="credit-wrap rev" data-d="1">
+        <div class="credit">
+          <button class="bio-toggle" aria-expanded="false" aria-controls="bio-ben">+</button>
+          <span class="nm">Ben Giesbrecht</span><span class="rl">Cinematographer</span>
+        </div>
+        <div class="bio-panel" id="bio-ben" role="region">
+          <div class="bio-inner"><p>Ben Giesbrecht is an award-winning cinematographer with more than a decade of professional experience creating documentary, commercial, tourism, and branded content. Based on Vancouver Island and the founder of Hideaway Creative, Ben specializes in crafting authentic, human-centered stories that connect audiences to people, places, and communities.<br><br>His work has been recognized with a Leo Award for Cinematography, an Indie Award, and three victories at the Whistler Film Festival's 72-Hour Filmmaker Showdown. Over the years, Ben has collaborated with leading brands and organizations including BMW Canada, Finisterre, Purdys Chocolatier, ICBC, Destination BC, Tourism Vancouver Island, and numerous communities and businesses across Western Canada.<br><br>With a cinematic yet natural approach, Ben focuses on capturing genuine moments and real experiences, creating visually compelling content that resonates with audiences while staying grounded in authenticity.</p></div>
+        </div>
+      </div>
+      <div class="credit-wrap rev" data-d="2">
+        <div class="credit">
+          <button class="bio-toggle" aria-expanded="false" aria-controls="bio-charles">+</button>
+          <span class="nm">Charles Nasby</span><span class="rl">Photographer</span>
+        </div>
+        <div class="bio-panel" id="bio-charles" role="region">
+          <div class="bio-inner"><p>Charles Nasby is a freelance photographer based in Vancouver, BC. After working 6 years at local in-house studios (Aritzia Photo Studio and Herschel Supply Creative Team) he began his freelance journey in 2023. Since then, he has shot for numerous local clients including Tacofino, Marcon, Rize Alliance Properties, Fable Home and Michelin Star awarded Kissa Tanto Restaurant.<br><br>Charles prefers a natural tone and realism that highlights the emotion of a specific moment rather than an overly staged look. His goal is to make the viewer think, "I wish I were there right now" and to feel the subject in a relatable way. Whether it's a quiet space or a crowded gathering, there's always something to find desirable in his work.</p></div>
+        </div>
+      </div>
+      <div class="credit-wrap rev" data-d="3">
+        <div class="credit no-toggle">
+          <span class="nm"><span class="tbd">To Be Determined</span></span><span class="rl">Producer</span>
+        </div>
+      </div>
     </div>
     
   </div>
@@ -493,7 +558,7 @@
           <div class="frame"><img src="ubc-proposal/charles/photo/3-marcon/40_IMAGE_MARCON-MERA-WEST-42_25-10-15_CHARLESRNASBY_HI-RES.webp" alt="Marcon"></div>
           <div class="frame"><img src="ubc-proposal/charles/photo/4-tacofino/16_IMAGE_TACOFINO_26-05-14_VICTORIA-LOCATION_CHARLESRNASBY_HI-RES.webp" alt="Tacofino"></div>
           <div class="frame"><img src="ubc-proposal/charles/photo/1-bao-bei/74_IMAGE_BAO-BEI_SOCIAL-SHOOT_04-30-24_CHARLESRNASBY.webp" alt="Bao Bei"></div>
-          <div class="frame"><img src="ubc-proposal/charles/photo/2-autostrada/50_IMAGE_AUTOSTRADA_SOCIAL-CLIPS_25-04-30_CHARLESRNASBY.webp" alt="Autostrada"></div>
+          <div class="frame"><img src="ubc-proposal/charles/photo/2-autostrada/https://jordanettinger.com/ubc-proposal/charles/photo/2-autostrada/50_IMAGE_AUTOSTRADA_SOCIAL-CLIPS_25-04-30_CHARLESRNASBY.webp" alt="Autostrada"></div>
           <div class="frame"><img src="ubc-proposal/charles/photo/3-marcon/56_IMAGE_MARCON-MERA-WEST-42_25-10-15_CHARLESRNASBY_HI-RES.webp" alt="Marcon"></div>
           <div class="frame"><img src="ubc-proposal/charles/photo/1-bao-bei/8_BAO-BEI_SOCIAL-IMAGE-AUG-9_CRNASBY.webp" alt="Bao Bei"></div>
           <div class="frame"><img src="ubc-proposal/charles/photo/2-autostrada/51_IMAGE_AUTOSTRADA_SOCIAL-CLIPS_25-04-30_CHARLESRNASBY.webp" alt="Autostrada"></div>
@@ -592,7 +657,7 @@
 <section class="section topline">
   <div class="inner">
     <div class="seclabel rev"><span class="n">08</span><span class="t">Rights + licensing</span></div>
-    <h2 class="h2 rev" style="max-width:22ch;">Exclusive on owned channels. Clear options for paid</h2>
+    <h2 class="h2 rev" style="max-width:22ch;">Exclusive on owned channels with options beyond</h2>
 
     <div class="rights rev" data-d="1">
       <div class="rcard"><span class="rh">Included</span><h3 class="h3">Owned channels</h3>
@@ -614,15 +679,15 @@
     <div class="seclabel rev"><span class="n">09</span><span class="t">Contact</span></div>
     <h2 class="h2 rev">Get in touch</h2>
     <div class="contact rev" data-d="1">
-      <div><div class="k">Studio</div><div class="v">[Team Name]<br><span class="grey">Vancouver Island + Greater Vancouver</span></div></div>
-      <div><div class="k">Direct</div><div class="v"><a href="mailto:[email]">[email]</a><br><span class="grey">[phone]</span></div></div>
+      <div><div class="k">Studio</div><div class="v">Jordan Ettinger Video Production<br><span class="grey">Vancouver Island + Greater Vancouver</span></div></div>
+      <div><div class="k">Direct</div><div class="v"><a href="mailto:mail@jordanettinger.com">mail@jordanettinger.com</a><br><span class="grey">778.228.2447</span></div></div>
       <div><div class="k">Portfolio</div><div class="v"><a href="https://www.jordanettinger.com" target="_blank" rel="noopener">jordanettinger.com</a></div></div>
     </div>
   </div>
 </section>
 
 <footer>
-  <span>[Team Name] — Proposal</span>
+  <span>Jordan Ettinger — Proposal</span>
   <span>UBC Properties Trust × The Storytelling Collective</span>
   <span>© 2026 · Confidential</span>
 </footer>
@@ -634,9 +699,24 @@
     es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
   },{threshold:.12, rootMargin:'0px 0px -6% 0px'});
   document.querySelectorAll('.rev,.frame').forEach(function(el){
+    if(el.closest('.masonry')) return;
     if(rm){ el.classList.add('in'); } else { io.observe(el); }
   });
+  document.querySelectorAll('.masonry').forEach(function(el){
+    if(rm){ el.querySelectorAll('.frame').forEach(function(f){ f.classList.add('in'); }); }
+    else { io.observe(el); }
+  });
 
+  document.querySelectorAll('.bio-toggle').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var expanded = btn.getAttribute('aria-expanded')==='true';
+      btn.setAttribute('aria-expanded', String(!expanded));
+      btn.style.opacity = '0';
+      setTimeout(function(){ btn.textContent = expanded ? '+' : '−'; btn.style.opacity = ''; }, 120);
+      var panel = document.getElementById(btn.getAttribute('aria-controls'));
+      if(panel){ panel.classList.toggle('open', !expanded); }
+    });
+  });
 })();
 </script>
 
