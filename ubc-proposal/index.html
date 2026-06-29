@@ -205,7 +205,7 @@
     transition:grid-template-rows .35s cubic-bezier(.4,0,.2,1);
   }
   .bio-panel.open{grid-template-rows:1fr;}
-  .bio-inner{overflow:hidden;}
+  .bio-inner{overflow:hidden;display:flex;align-items:center;gap:clamp(16px,3vw,32px);}
   .bio-inner p{
     margin:0;
     padding:0 0 26px 46px;
@@ -215,8 +215,22 @@
     max-width:64ch;
     opacity:0;
     transition:opacity .22s ease .1s;
+    flex:1;
   }
   .bio-panel.open .bio-inner p{opacity:1;}
+  .bio-photo-img{
+    flex-shrink:0;
+    width:clamp(180px,24vw,300px);
+    height:auto;
+    display:block;
+    opacity:0;
+    transition:opacity .22s ease .1s;
+    margin-top:4px;
+    margin-left:auto;
+    padding-bottom:20px;
+  }
+  .bio-panel.open .bio-photo-img{opacity:1;}
+  @media(max-width:600px){.bio-photo-img{display:none;}}
 
   /* ============================================================
      BUDGET
@@ -289,7 +303,7 @@
      HERO  — declarative. States what this is, then stops.
 ====================================================================== -->
 <header class="hero">
-  <video class="hero-video" src="/ubc-proposal/band/Hero.webm" autoplay muted loop playsinline></video>
+  <video class="hero-video" src="/ubc-proposal/band/Hero.webm" muted loop playsinline></video>
   <div class="hero-overlay"></div>
   <div class="inner">
     <p class="eyebrow rev">Video + Photography — Proposal</p>
@@ -446,7 +460,7 @@
           <span class="nm">Jordan Ettinger</span><span class="rl">Director</span>
         </div>
         <div class="bio-panel" id="bio-jordan" role="region">
-          <div class="bio-inner"><p>Jordan Ettinger is a director and video producer based on Vancouver Island, BC. He has been making videos for twenty years and has worked full-time in production since 2021, completing more than 150 projects across documentary, outdoor, sports, e-commerce, and luxury — collaborating with studios, independent brands, and individual clients across Western Canada and beyond.<br><br>His foundation is in narrative filmmaking. He got his start making short films and skateboarding videos, where he developed an instinct for pacing, movement, and how the shape of a story changes what a viewer feels. That sensibility carries directly into his client work today. His focus is production for the design and creative community — designers, architects, outdoor and hospitality brands, and creative studios who need films that hold up next to the work they're proud of. The result is content that is clean, considered, and built to last.</p></div>
+          <div class="bio-inner"><p>Jordan Ettinger is a director and video producer based on Vancouver Island, BC. He has been making videos for twenty years and has worked full-time in production since 2021, completing more than 150 projects across documentary, outdoor, sports, e-commerce, and luxury — collaborating with studios, independent brands, and individual clients across Western Canada and beyond.<br><br>His foundation is in narrative filmmaking. He got his start making short films and skateboarding videos, where he developed an instinct for pacing, movement, and how the shape of a story changes what a viewer feels. That sensibility carries directly into his client work today. His focus is production for the design and creative community — designers, architects, outdoor and hospitality brands, and creative studios who need films that hold up next to the work they're proud of. The result is content that is clean, considered, and built to last.</p><img class="bio-photo-img" src="/ubc-proposal/bios/jordan.webp" alt="Jordan Ettinger"></div>
         </div>
       </div>
       <div class="credit-wrap rev" data-d="1">
@@ -455,7 +469,7 @@
           <span class="nm">Ben Giesbrecht</span><span class="rl">Cinematographer</span>
         </div>
         <div class="bio-panel" id="bio-ben" role="region">
-          <div class="bio-inner"><p>Ben Giesbrecht is an award-winning cinematographer with more than a decade of professional experience creating documentary, commercial, tourism, and branded content. Based on Vancouver Island and the founder of Hideaway Creative, Ben specializes in crafting authentic, human-centered stories that connect audiences to people, places, and communities.<br><br>His work has been recognized with a Leo Award for Cinematography, an Indie Award, and three victories at the Whistler Film Festival's 72-Hour Filmmaker Showdown. Over the years, Ben has collaborated with leading brands and organizations including BMW Canada, Finisterre, Purdys Chocolatier, ICBC, Destination BC, Tourism Vancouver Island, and numerous communities and businesses across Western Canada.<br><br>With a cinematic yet natural approach, Ben focuses on capturing genuine moments and real experiences, creating visually compelling content that resonates with audiences while staying grounded in authenticity.</p></div>
+          <div class="bio-inner"><p>Ben Giesbrecht is an award-winning cinematographer with more than a decade of professional experience creating documentary, commercial, tourism, and branded content. Based on Vancouver Island and the founder of Hideaway Creative, Ben specializes in crafting authentic, human-centered stories that connect audiences to people, places, and communities.<br><br>His work has been recognized with a Leo Award for Cinematography, an Indie Award, and three victories at the Whistler Film Festival's 72-Hour Filmmaker Showdown. Over the years, Ben has collaborated with leading brands and organizations including BMW Canada, Finisterre, Purdys Chocolatier, ICBC, Destination BC, Tourism Vancouver Island, and numerous communities and businesses across Western Canada.<br><br>With a cinematic yet natural approach, Ben focuses on capturing genuine moments and real experiences, creating visually compelling content that resonates with audiences while staying grounded in authenticity.</p><img class="bio-photo-img" src="/ubc-proposal/bios/ben.webp" alt="Ben Giesbrecht"></div>
         </div>
       </div>
       <div class="credit-wrap rev" data-d="2">
@@ -464,7 +478,7 @@
           <span class="nm">Charles Nasby</span><span class="rl">Photographer</span>
         </div>
         <div class="bio-panel" id="bio-charles" role="region">
-          <div class="bio-inner"><p>Charles Nasby is a freelance photographer based in Vancouver, BC. After working 6 years at local in-house studios (Aritzia Photo Studio and Herschel Supply Creative Team) he began his freelance journey in 2023. Since then, he has shot for numerous local clients including Tacofino, Marcon, Rize Alliance Properties, Fable Home and Michelin Star awarded Kissa Tanto Restaurant.<br><br>Charles prefers a natural tone and realism that highlights the emotion of a specific moment rather than an overly staged look. His goal is to make the viewer think, "I wish I were there right now" and to feel the subject in a relatable way. Whether it's a quiet space or a crowded gathering, there's always something to find desirable in his work.</p></div>
+          <div class="bio-inner"><p>Charles Nasby is a freelance photographer based in Vancouver, BC. After working 6 years at local in-house studios (Aritzia Photo Studio and Herschel Supply Creative Team) he began his freelance journey in 2023. Since then, he has shot for numerous local clients including Tacofino, Marcon, Rize Alliance Properties, Fable Home and Michelin Star awarded Kissa Tanto Restaurant.<br><br>Charles prefers a natural tone and realism that highlights the emotion of a specific moment rather than an overly staged look. His goal is to make the viewer think, "I wish I were there right now" and to feel the subject in a relatable way. Whether it's a quiet space or a crowded gathering, there's always something to find desirable in his work.</p><img class="bio-photo-img" src="/ubc-proposal/bios/charles.webp" alt="Charles Nasby"></div>
         </div>
       </div>
       <div class="credit-wrap rev" data-d="3">
@@ -505,14 +519,14 @@
                       ></iframe></div>
           <p class="media-label" style="margin-top:0;">HAVN Saunas</p></div>
           <div>
-            
+
             <div style="position:relative;padding-top:56.25%;"><iframe
-                      src="https://customer-fnbjpmdrtp308rc1.cloudflarestream.com/89ab38f483442cea67e10274ff1e7970/iframe?preload=true&poster=https%3A%2F%2Fimagedelivery.net%2FFherua4diLdqiVpXj8EqQg%2Fcec28ca3-8ca2-44cf-129a-b9047b2d3a00%2Fpublic"
+                      src="https://customer-fnbjpmdrtp308rc1.cloudflarestream.com/7a34da4c4b631460d2c28e76bd70b995/iframe?poster=https%3A%2F%2Fimagedelivery.net%2FFherua4diLdqiVpXj8EqQg%2Faa01999a-aea3-49a8-6fce-cb9efb580700%2Fpublic"
                       style="border: none; position: absolute; top: 0; left: 0; height: 100%; width: 100%;"
                       allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
                       allowfullscreen="true"
                   ></iframe></div>
-          <p class="media-label" style="margin-top:0;">Lightwater Cove</p></div>
+          <p class="media-label" style="margin-top:0;">Villamar</p></div>
           <div>
             
             <div style="position:relative;padding-top:56.25%;"><iframe
@@ -558,7 +572,7 @@
           <div class="frame"><img src="/ubc-proposal/charles/photo/3-marcon/40_IMAGE_MARCON-MERA-WEST-42_25-10-15_CHARLESRNASBY_HI-RES.webp" alt="Marcon"></div>
           <div class="frame"><img src="/ubc-proposal/charles/photo/4-tacofino/16_IMAGE_TACOFINO_26-05-14_VICTORIA-LOCATION_CHARLESRNASBY_HI-RES.webp" alt="Tacofino"></div>
           <div class="frame"><img src="/ubc-proposal/charles/photo/1-bao-bei/74_IMAGE_BAO-BEI_SOCIAL-SHOOT_04-30-24_CHARLESRNASBY.webp" alt="Bao Bei"></div>
-          <div class="frame"><img src="/ubc-proposal/charles/photo/2-autostrada/https://jordanettinger.com/ubc-proposal/charles/photo/2-autostrada/50_IMAGE_AUTOSTRADA_SOCIAL-CLIPS_25-04-30_CHARLESRNASBY.webp" alt="Autostrada"></div>
+          <div class="frame"><img src="/ubc-proposal/charles/photo/2-autostrada/50_IMAGE_AUTOSTRADA_SOCIAL-CLIPS_25-04-30_CHARLESRNASBY.webp" alt="Autostrada"></div>
           <div class="frame"><img src="/ubc-proposal/charles/photo/3-marcon/56_IMAGE_MARCON-MERA-WEST-42_25-10-15_CHARLESRNASBY_HI-RES.webp" alt="Marcon"></div>
           <div class="frame"><img src="/ubc-proposal/charles/photo/1-bao-bei/8_BAO-BEI_SOCIAL-IMAGE-AUG-9_CRNASBY.webp" alt="Bao Bei"></div>
           <div class="frame"><img src="/ubc-proposal/charles/photo/2-autostrada/51_IMAGE_AUTOSTRADA_SOCIAL-CLIPS_25-04-30_CHARLESRNASBY.webp" alt="Autostrada"></div>
@@ -767,8 +781,11 @@
   var btn = document.getElementById('pw-submit');
   var err = document.getElementById('pw-error');
 
+  var heroVideo = document.querySelector('.hero-video');
+
   if(sessionStorage.getItem(KEY) === '1'){
     gate.classList.add('hidden');
+    heroVideo.play();
     return;
   }
 
@@ -779,6 +796,7 @@
       sessionStorage.setItem(KEY, '1');
       gate.classList.add('hidden');
       document.body.style.overflow = '';
+      heroVideo.play();
     } else {
       err.classList.add('show');
       input.value = '';
