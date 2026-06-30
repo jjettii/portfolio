@@ -1,16 +1,13 @@
 document.addEventListener('DOMContentLoaded', function() {
     // ===== NAVIGATION ACTIVE STATE =====
     const navLinks = document.querySelectorAll('.nav-link');
-    let currentPage = window.location.pathname.split('/').pop();
-
-    // Handle root URL or trailing slash
-    if (!currentPage || currentPage === '') {
-        currentPage = 'index.html';
-    }
+    // Normalize: strip trailing slash from pathname so /about/ and /about both match.
+    // The empty string after stripping / becomes '/' (root).
+    const currentPath = window.location.pathname.replace(/\/$/, '') || '/';
 
     navLinks.forEach(link => {
-        const href = link.getAttribute('href');
-        if (href === currentPage) {
+        const href = (link.getAttribute('href') || '').replace(/\/$/, '') || '/';
+        if (href === currentPath) {
             link.classList.add('active');
         }
     });
@@ -22,30 +19,31 @@ document.addEventListener('DOMContentLoaded', function() {
         let currentlyPlaying = null;
         let touchStarted = false;
 
-        // Project page mapping
+        // Maps data-video-id values to root-absolute clean URLs used for navigation
+        // when a user clicks a playing video on the portfolio grid.
         const projectPages = {
-            'havn': 'projects/havn.html',
-            'lightwater-cove': 'projects/lightwater-cove.html',
-            'kwench': 'projects/kwench.html',
-            'itl': 'projects/inside-the-leather.html',
-            'san-poncho': 'projects/san-poncho.html',
-            'bracelayer': 'projects/bracelayer.html',
-            'plr': 'projects/plr.html',
-            'den': 'projects/den.html',
-            'edible-underwear': 'projects/edible-underwear.html',
-            'arcteryx': 'projects/arcteryx.html',
-            'green-acres': 'projects/green-acres.html',
-            'peak-performance': 'projects/peak-performance.html',
-            'sheringham': 'projects/sheringham.html',
-            'whistlebuoy': 'projects/whistlebuoy.html',
-            'anian': 'projects/anian.html',
-            'therun': 'projects/the-run.html',
-            'villamar': 'projects/villamar.html',
-            'somedays': 'projects/somedays.html',
-            'too-much': 'projects/too-much.html',
-            'steam-mystic': 'projects/steam-mystic.html',
-            'plezzy': 'projects/plezzy.html',
-            'bear-cub': 'projects/bear-cub.html'
+            'havn': '/projects/havn/',
+            'lightwater-cove': '/projects/lightwater-cove/',
+            'kwench': '/projects/kwench/',
+            'itl': '/projects/inside-the-leather/',
+            'san-poncho': '/projects/san-poncho/',
+            'bracelayer': '/projects/bracelayer/',
+            'plr': '/projects/plr/',
+            'den': '/projects/den/',
+            'edible-underwear': '/projects/edible-underwear/',
+            'arcteryx': '/projects/arcteryx/',
+            'green-acres': '/projects/green-acres/',
+            'peak-performance': '/projects/peak-performance/',
+            'sheringham': '/projects/sheringham/',
+            'whistlebuoy': '/projects/whistlebuoy/',
+            'anian': '/projects/anian/',
+            'therun': '/projects/the-run/',
+            'villamar': '/projects/villamar/',
+            'somedays': '/projects/somedays/',
+            'too-much': '/projects/too-much/',
+            'steam-mystic': '/projects/steam-mystic/',
+            'plezzy': '/projects/plezzy/',
+            'bear-cub': '/projects/bear-cub/'
         };
 
         videoItems.forEach(item => {
