@@ -709,6 +709,14 @@ async function handleReviewVideos(request, env, id) {
 
 // ─── Stream Handlers ─────────────────────────────────────────────────────────
 
+// Base64-encode a UTF-8 string for the tus Upload-Metadata header (btoa is Latin1-only).
+function b64utf8(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+
 async function handleStreamUploadCreate(request, env) {
   const denied = requireAdmin(request, env);
   if (denied) return denied;
@@ -716,26 +724,29 @@ async function handleStreamUploadCreate(request, env) {
   let body;
   try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
 
-  const { title, description, review_id } = body;
+  const { title, description, review_id, filesize } = body;
   if (!title) return json({ error: 'title is required' }, 400);
   if (!review_id) return json({ error: 'review_id is required' }, 400);
+  if (!filesize || filesize <= 0) return json({ error: 'filesize is required' }, 400);
 
   const reviewRow = await env.DB.prepare(`SELECT id FROM reviews WHERE id = ?`).bind(review_id).first();
   if (!reviewRow) return json({ error: 'Review not found' }, 404);
 
+  // Reserve a one-time tus upload URL (direct creator upload). tus is resumable and has no
+  // 200 MB cap, unlike the basic /direct_upload POST flow. maxDurationSeconds/name go through
+  // the Upload-Metadata header; omitting requiresignedurls keeps playback unsigned.
+  const uploadMetadata = `name ${b64utf8(title)},maxDurationSeconds ${b64utf8('7200')}`;
+
   const resp = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/stream/direct_upload`,
+    `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/stream?direct_user=true`,
     {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${env.STREAM_API_TOKEN}`,
-        'Content-Type': 'application/json',
+        'Tus-Resumable': '1.0.0',
+        'Upload-Length': String(filesize),
+        'Upload-Metadata': uploadMetadata,
       },
-      body: JSON.stringify({
-        maxDurationSeconds: 7200,
-        requireSignedURLs: false,
-        meta: { name: title },
-      }),
     }
   );
 
@@ -744,9 +755,11 @@ async function handleStreamUploadCreate(request, env) {
     return json({ error: 'Stream API error', detail: text }, 502);
   }
 
-  const { result } = await resp.json();
-  const uploadUrl = result.uploadURL;
-  const streamUid = result.uid;
+  const uploadUrl = resp.headers.get('Location');
+  const streamUid = resp.headers.get('stream-media-id');
+  if (!uploadUrl || !streamUid) {
+    return json({ error: 'Stream API did not return an upload URL' }, 502);
+  }
 
   await env.DB.prepare(
     `INSERT INTO videos (stream_uid, title, description, review_id) VALUES (?, ?, ?, ?)`

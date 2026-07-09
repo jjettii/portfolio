@@ -8,6 +8,7 @@
   <link rel="icon" type="image/png" href="/assets/favicon/favicon-96x96.png" sizes="96x96">
   <link rel="stylesheet" href="/assets/css/style.css">
   <script src="https://embed.cloudflarestream.com/embed/sdk.latest.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4.3.1/dist/tus.min.js"></script>
   <style>
     body { background: #fff; }
 
@@ -1196,10 +1197,15 @@ async function doStreamUpload() {
   btn.textContent = 'Starting…';
 
   try {
+    if (typeof tus === 'undefined') {
+      showErr(errEl, 'Upload library failed to load — refresh and try again.');
+      return;
+    }
+
     const resp = await fetch(`${WORKER_URL}/api/stream/upload`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
-      body: JSON.stringify({ title, description, review_id: currentSession.id }),
+      body: JSON.stringify({ title, description, review_id: currentSession.id, filesize: file.size }),
     });
 
     if (!resp.ok) {
@@ -1215,24 +1221,23 @@ async function doStreamUpload() {
     progressWrap.style.display = 'block';
     btn.textContent = 'Uploading…';
 
+    // Resumable tus upload to the one-time Cloudflare Stream URL — no 200 MB cap, survives
+    // a dropped connection. chunkSize must be set and be a multiple of 256 KiB for Stream.
     await new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', uploadUrl);
-      // Use FormData (multipart/form-data) — avoids CORS preflight that blocks raw binary uploads
-      const formData = new FormData();
-      formData.append('file', file);
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) {
-          const pct = Math.round((e.loaded / e.total) * 100);
+      const upload = new tus.Upload(file, {
+        uploadUrl,
+        chunkSize: 50 * 1024 * 1024,
+        retryDelays: [0, 3000, 5000, 10000, 20000],
+        metadata: { filename: file.name, filetype: file.type },
+        onProgress: (uploaded, total) => {
+          const pct = Math.round((uploaded / total) * 100);
           bar.style.width = pct + '%';
           label.textContent = `Uploading… ${pct}%`;
-        }
-      };
-      xhr.onload = () => xhr.status >= 200 && xhr.status < 300
-        ? resolve()
-        : reject(new Error(`Upload returned HTTP ${xhr.status}`));
-      xhr.onerror = () => reject(new Error('Network error during upload'));
-      xhr.send(formData);
+        },
+        onError: (error) => reject(error),
+        onSuccess: () => resolve(),
+      });
+      upload.start();
     });
 
     label.textContent = 'Upload complete — processing may take a few minutes.';
