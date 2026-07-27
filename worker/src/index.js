@@ -142,8 +142,9 @@ const CORS = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
-const UPLOAD_EXPIRY = 7200;      // 2 hours for upload window
-const DOWNLOAD_EXPIRY = 2592000; // 30 days for download links
+const UPLOAD_EXPIRY = 7200;    // 2 hours for upload window
+const DOWNLOAD_EXPIRY = 3600;  // 1 hour — R2/S3 presigned URLs are re-minted per click anyway,
+                                // and X-Amz-Expires can never exceed 604800 (7 days) regardless
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
