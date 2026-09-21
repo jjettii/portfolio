@@ -1,1 +1,0 @@
-{"rules":[{"allowed":{"origins":["*"],"methods":["PUT","GET","HEAD"],"headers":["*"]},"exposeHeaders":[],"maxAgeSeconds":3000}]}
