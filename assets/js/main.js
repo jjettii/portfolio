@@ -22,6 +22,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Maps data-video-id values to root-absolute clean URLs used for navigation
         // when a user clicks a playing video on the portfolio grid.
         const projectPages = {
+            'aryze': '/projects/aryze/',
+            'hera': '/projects/hera/',
             'havn': '/projects/havn/',
             'lightwater-cove': '/projects/lightwater-cove/',
             'kwench': '/projects/kwench/',
@@ -49,6 +51,9 @@ document.addEventListener('DOMContentLoaded', function() {
         videoItems.forEach(item => {
             const video = item.querySelector('.video-preview');
             const videoId = item.dataset.videoId;
+
+            // Poster-only project links work normally until a preview is available.
+            if (!video) return;
 
             // Desktop: hover to preview
             item.addEventListener('mouseenter', function() {

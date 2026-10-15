@@ -634,6 +634,8 @@ let isAdminSession = false;  // true when admin opened session (no password requ
 let currentVideo = null;     // { stream_uid, title, description }
 let currentTime = 0;
 let streamPlayer = null;
+let playerReady = false;
+let pendingSeek = null;
 let commentsCache = [];
 let editingReviewId = null;
 
@@ -985,6 +987,8 @@ function openVideo(uid, title, description) {
   currentVideo = { stream_uid: uid, title, description };
   currentTime = 0;
   streamPlayer = null;
+  playerReady = false;
+  pendingSeek = null;
 
   document.getElementById('playerTitle').textContent = title;
   document.getElementById('timecode').textContent = '0:00';
@@ -992,17 +996,28 @@ function openVideo(uid, title, description) {
   document.getElementById('commentText').value = '';
   document.getElementById('adminVideoActions').style.display = adminToken ? 'flex' : 'none';
 
-  const iframe = document.getElementById('streamPlayer');
+  // Give each video a fresh iframe and SDK connection.
+  const previousIframe = document.getElementById('streamPlayer');
+  const iframe = previousIframe.cloneNode(false);
   iframe.src = `https://iframe.cloudflarestream.com/${uid}?preload=auto&loop=false`;
-  iframe.onload = function () {
-    streamPlayer = Stream(iframe);
-    streamPlayer.muted = false;
-    streamPlayer.addEventListener('timeupdate', function () {
-      currentTime = streamPlayer.currentTime;
-      document.getElementById('timecode').textContent = formatTime(currentTime);
-      document.getElementById('commentAt').textContent = 'At ' + formatTime(currentTime);
-    });
-  };
+  previousIframe.replaceWith(iframe);
+  const player = Stream(iframe);
+  streamPlayer = player;
+  player.muted = false;
+  player.addEventListener('loadedmetadata', function () {
+    if (streamPlayer !== player) return;
+    playerReady = true;
+    if (pendingSeek !== null) {
+      player.currentTime = pendingSeek;
+      pendingSeek = null;
+    }
+  });
+  player.addEventListener('timeupdate', function () {
+    if (streamPlayer !== player || pendingSeek !== null) return;
+    currentTime = player.currentTime;
+    document.getElementById('timecode').textContent = formatTime(currentTime);
+    document.getElementById('commentAt').textContent = 'At ' + formatTime(currentTime);
+  });
 
   loadComments(uid);
   showPanel('Player');
@@ -1010,6 +1025,8 @@ function openVideo(uid, title, description) {
 
 function backToSession() {
   streamPlayer = null;
+  playerReady = false;
+  pendingSeek = null;
   document.getElementById('streamPlayer').src = '';
   showPanel('Session');
 }
@@ -1159,8 +1176,13 @@ async function deleteComment(e, id) {
 }
 
 function seekTo(seconds) {
-  if (streamPlayer) {
+  seconds = Number(seconds);
+  if (!Number.isFinite(seconds) || seconds < 0) return;
+  if (streamPlayer && playerReady) {
     streamPlayer.currentTime = seconds;
+  } else {
+    // Comments can arrive before the video metadata; keep the latest click.
+    pendingSeek = seconds;
   }
   currentTime = seconds;
   document.getElementById('timecode').textContent = formatTime(seconds);
