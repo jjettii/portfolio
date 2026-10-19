@@ -370,6 +370,12 @@
         <div id="uploadForm">
           <h1 class="ft-heading">New Transfer</h1>
 
+          <fieldset class="ft-field" style="border:0;padding:0">
+            <legend class="ft-label">File hosting</legend>
+            <label style="margin-right:24px"><input type="radio" name="storageProvider" value="cloudflare" checked> Cloudflare</label>
+            <label><input type="radio" name="storageProvider" value="homeserver"> Homeserver</label>
+          </fieldset>
+
           <input type="file" id="fileInput" onchange="onFileChosen(this)">
           <div class="ft-dropzone" id="dropzone"
                onclick="document.getElementById('fileInput').click()"
@@ -416,6 +422,7 @@
 
       <!-- ── Detail view ────────────────────────────────────────────────────── -->
       <div id="adminViewDetail" style="display:none">
+        <p class="ft-notice" id="detailStorage" style="margin-bottom:24px"></p>
         <div style="margin-bottom:32px">
           <a href="#" style="font-size:12px;font-weight:300;color:#aaa;text-decoration:none;letter-spacing:0.5px"
              onclick="showListView(event)">← Back to transfers</a>
@@ -498,6 +505,42 @@ let chosenFiles = [];
 let chosenFolderName = null;
 let fileList = [];
 let currentDetailId = null;
+let currentDetailStorage = null;
+
+function storageProvider(data) {
+  const provider = data.storage_provider ?? 'cloudflare';
+  if (!['cloudflare', 'homeserver'].includes(provider)) throw new Error('Unknown file hosting provider.');
+  return provider;
+}
+
+function storageLabel(data) {
+  return storageProvider(data) === 'homeserver' ? 'Homeserver' : 'Cloudflare';
+}
+
+function verifyStorage(data, expected) {
+  if (storageProvider(data) !== expected) {
+    throw new Error('The server did not confirm the selected file hosting provider. No file was uploaded.');
+  }
+}
+
+async function requireHomeserver() {
+  const resp = await fetch(`${WORKER_URL}/api/transfer/capabilities`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+    cache: 'no-store',
+  });
+  if (!resp.ok) throw new Error('Homeserver hosting is not configured yet. Complete the server setup first.');
+  const data = await resp.json();
+  if (!data.storage_providers?.includes('homeserver')) {
+    throw new Error('Homeserver hosting is currently unavailable.');
+  }
+}
+
+function uploadStoredFile(data, provider, key, file, onProgress) {
+  verifyStorage(data, provider);
+  const multipart = provider === 'cloudflare' && file.size > MULTIPART_THRESHOLD;
+  if (!multipart && !data.uploadUrl) throw new Error('The server did not return an upload URL.');
+  return uploadWithProgress(multipart ? key : data.uploadUrl, file, onProgress, multipart);
+}
 let detailChosenFiles = [];
 let detailFileMap = [];
 
@@ -713,6 +756,7 @@ function renderTransferList(items) {
     }
     if (meta) meta += ' · ';
     meta += new Date(t.created_at).toLocaleDateString('en-CA');
+    meta += ` · ${storageLabel(t)}`;
     return `
     <div class="ft-list-item" style="cursor:pointer" onclick="showDetailView('${esc(t.id)}')">
       <div class="ft-list-info">
@@ -751,6 +795,8 @@ async function showDetailView(id) {
 
 // ─── Detail view ──────────────────────────────────────────────────────────────
 async function loadDetailView(id) {
+  currentDetailStorage = null;
+  document.getElementById('detailStorage').textContent = '';
   document.getElementById('detailNameError').style.display = 'none';
   document.getElementById('detailNameOk').style.display = 'none';
   document.getElementById('detailPassError').style.display = 'none';
@@ -767,6 +813,8 @@ async function loadDetailView(id) {
   if (!resp.ok) return;
   const data = await resp.json();
 
+  currentDetailStorage = storageProvider(data);
+  document.getElementById('detailStorage').textContent = `Hosted on ${storageLabel(data)}`;
   document.getElementById('detailName').value = data.filename || '';
   document.getElementById('detailShareUrl').value = `${location.origin}/transfer/?id=${id}`;
 
@@ -934,6 +982,7 @@ async function doAddFiles() {
 
   errEl.style.display = 'none';
   if (!detailChosenFiles.length) { showErr(errEl, 'Choose files first.'); return; }
+  if (!currentDetailStorage) { showErr(errEl, 'Reload this transfer before adding files.'); return; }
 
   btn.disabled = true;
   progress.style.display = 'block';
@@ -955,9 +1004,9 @@ async function doAddFiles() {
         throw new Error(d.error || `Failed to register: ${path}`);
       }
 
-      const { uploadUrl } = await addResp.json();
+      const upload = await addResp.json();
       const r2Key = `transfers/${currentDetailId}/${path}`;
-      await uploadWithProgress(file.size > MULTIPART_THRESHOLD ? r2Key : uploadUrl, file, (pct) => {
+      await uploadStoredFile(upload, currentDetailStorage, r2Key, file, (pct) => {
         bar.style.width = Math.round(((i + pct / 100) / detailChosenFiles.length) * 100) + '%';
       });
     }
@@ -980,6 +1029,7 @@ async function doAddFiles() {
 
 // ─── Upload flow ──────────────────────────────────────────────────────────────
 function resetUploadForm() {
+  document.querySelector('input[name="storageProvider"][value="cloudflare"]').checked = true;
   chosenFiles = [];
   chosenFolderName = null;
   document.getElementById('chosenFile').textContent = '';
@@ -1089,6 +1139,7 @@ function readAllDirEntries(reader) {
 }
 
 async function doUpload() {
+  const provider = document.querySelector('input[name="storageProvider"]:checked').value;
   const pass = document.getElementById('upPass').value.trim();
   const desc = document.getElementById('upDesc').value.trim();
   const errEl = document.getElementById('uploadError');
@@ -1108,10 +1159,11 @@ async function doUpload() {
   progressWrap.style.display = 'block';
 
   try {
+    if (provider === 'homeserver') await requireHomeserver();
     const isMulti = chosenFiles.length > 1 || chosenFolderName !== null;
     const id = isMulti
-      ? await doMultiUpload(pass, desc, bar, label)
-      : await doSingleUpload(pass, desc, bar, label, errEl);
+      ? await doMultiUpload(pass, desc, bar, label, provider)
+      : await doSingleUpload(pass, desc, bar, label, errEl, provider);
 
     if (!id) return;
 
@@ -1129,13 +1181,13 @@ async function doUpload() {
   }
 }
 
-async function doSingleUpload(pass, desc, bar, label, errEl) {
+async function doSingleUpload(pass, desc, bar, label, errEl, provider) {
   const { file } = chosenFiles[0];
 
   const createResp = await fetch(`${WORKER_URL}/api/transfer/create`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
-    body: JSON.stringify({ filename: file.name, filesize: file.size, description: desc, password: pass }),
+    body: JSON.stringify({ filename: file.name, filesize: file.size, description: desc, password: pass, storage_provider: provider }),
   });
 
   if (!createResp.ok) {
@@ -1144,10 +1196,11 @@ async function doSingleUpload(pass, desc, bar, label, errEl) {
     return null;
   }
 
-  const { id, uploadUrl } = await createResp.json();
+  const upload = await createResp.json();
+  const { id } = upload;
   const r2Key = `transfers/${id}/${file.name}`;
 
-  await uploadWithProgress(file.size > MULTIPART_THRESHOLD ? r2Key : uploadUrl, file, (pct) => {
+  await uploadStoredFile(upload, provider, r2Key, file, (pct) => {
     bar.style.width = pct + '%';
     label.textContent = `Uploading… ${pct}%`;
   });
@@ -1155,11 +1208,11 @@ async function doSingleUpload(pass, desc, bar, label, errEl) {
   return id;
 }
 
-async function doMultiUpload(pass, desc, bar, label) {
+async function doMultiUpload(pass, desc, bar, label, provider) {
   const createResp = await fetch(`${WORKER_URL}/api/transfer/create-multi`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
-    body: JSON.stringify({ name: desc, password: pass }),
+    body: JSON.stringify({ name: desc, password: pass, storage_provider: provider }),
   });
 
   if (!createResp.ok) {
@@ -1167,7 +1220,9 @@ async function doMultiUpload(pass, desc, bar, label) {
     throw new Error(d.error || 'Could not create transfer.');
   }
 
-  const { id } = await createResp.json();
+  const transfer = await createResp.json();
+  verifyStorage(transfer, provider);
+  const { id } = transfer;
 
   for (let i = 0; i < chosenFiles.length; i++) {
     const { file, path } = chosenFiles[i];
@@ -1186,10 +1241,10 @@ async function doMultiUpload(pass, desc, bar, label) {
       throw new Error(d.error || `Failed to register: ${path}`);
     }
 
-    const { uploadUrl } = await addResp.json();
+    const upload = await addResp.json();
     const r2Key = `transfers/${id}/${path}`;
 
-    await uploadWithProgress(file.size > MULTIPART_THRESHOLD ? r2Key : uploadUrl, file, (pct) => {
+    await uploadStoredFile(upload, provider, r2Key, file, (pct) => {
       bar.style.width = Math.round(((i + pct / 100) / chosenFiles.length) * 100) + '%';
     });
   }
@@ -1198,8 +1253,8 @@ async function doMultiUpload(pass, desc, bar, label) {
   return id;
 }
 
-async function uploadWithProgress(urlOrKey, file, onProgress) {
-  if (file.size <= MULTIPART_THRESHOLD) {
+async function uploadWithProgress(urlOrKey, file, onProgress, multipart = file.size > MULTIPART_THRESHOLD) {
+  if (!multipart) {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open('PUT', urlOrKey);

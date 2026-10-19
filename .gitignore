@@ -1,0 +1,9 @@
+/tmp/
+/portfolio-worker/node_modules/
+/portfolio-worker/.wrangler/
+/portfolio-worker/tmp/
+/portfolio-worker/.dev.vars*
+/.wrangler/
+/.dev.vars*
+/.env
+/.env.*
