@@ -64,6 +64,62 @@
     .ft-input:focus { outline: none; border-color: #000; }
     .ft-input::placeholder { color: #aaa; }
 
+    /* Storage provider switch */
+    .ft-provider-field { margin-bottom: 24px; }
+    .ft-provider-toggle {
+      position: relative;
+      display: inline-grid;
+      grid-template-columns: repeat(2, minmax(104px, 1fr));
+      padding: 3px;
+      border: 1px solid #ccc;
+      background: #f5f5f5;
+    }
+    .ft-provider-toggle::before {
+      content: '';
+      position: absolute;
+      z-index: 0;
+      top: 3px;
+      bottom: 3px;
+      left: 3px;
+      width: calc((100% - 6px) / 2);
+      background: #000;
+      transition: transform 0.2s ease;
+    }
+    .ft-provider-toggle:has(input[value="homeserver"]:checked)::before {
+      transform: translateX(100%);
+    }
+    .ft-provider-option { cursor: pointer; }
+    .ft-provider-option input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .ft-provider-option span {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 32px;
+      padding: 0 14px;
+      color: #777;
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 1px;
+      line-height: 1;
+      text-transform: uppercase;
+      transition: color 0.2s ease;
+      user-select: none;
+    }
+    .ft-provider-option input:checked + span { color: #fff; }
+    .ft-provider-toggle:has(input:focus-visible) { outline: 1px solid #000; outline-offset: 3px; }
+    @media (prefers-reduced-motion: reduce) {
+      .ft-provider-toggle::before,
+      .ft-provider-option span { transition: none; }
+    }
+
     .ft-btn {
       display: inline-block;
       padding: 12px 32px;
@@ -370,10 +426,18 @@
         <div id="uploadForm">
           <h1 class="ft-heading">New Transfer</h1>
 
-          <fieldset class="ft-field" style="border:0;padding:0">
+          <fieldset class="ft-field ft-provider-field" style="border:0;padding:0">
             <legend class="ft-label">File hosting</legend>
-            <label style="margin-right:24px"><input type="radio" name="storageProvider" value="cloudflare" checked> Cloudflare</label>
-            <label><input type="radio" name="storageProvider" value="homeserver"> Homeserver</label>
+            <div class="ft-provider-toggle">
+              <label class="ft-provider-option">
+                <input type="radio" name="storageProvider" value="cloudflare" checked>
+                <span>Cloudflare</span>
+              </label>
+              <label class="ft-provider-option">
+                <input type="radio" name="storageProvider" value="homeserver">
+                <span>Homeserver</span>
+              </label>
+            </div>
           </fieldset>
 
           <input type="file" id="fileInput" onchange="onFileChosen(this)">
