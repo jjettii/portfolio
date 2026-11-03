@@ -483,7 +483,7 @@ async function handleTransferCreate(request, env) {
   } catch {
     return json({ error: "Invalid JSON" }, 400);
   }
-  const { filename, filesize, description, password } = body;
+  const { filename, filesize, name, description, password } = body;
   if (!filename || !password)
     return json({ error: "filename and password are required" }, 400);
   const storage = provider(body.storage_provider);
@@ -497,7 +497,7 @@ async function handleTransferCreate(request, env) {
   await env.DB.prepare(
     `INSERT INTO transfers (id, filename, filesize, r2_key, password_hash, description, storage_provider)
      VALUES (?, ?, ?, ?, ?, ?, ?)`
-  ).bind(id, filename, filesize ?? null, r2Key, passwordHash, description || null, storage).run();
+  ).bind(id, typeof name === 'string' && name.trim() ? name.trim() : filename, filesize ?? null, r2Key, passwordHash, description || null, storage).run();
   if (storage === 'homeserver') await home(env, '/v1/transfers/' + id, 'POST', {});
   const uploadUrl = storage === 'homeserver'
     ? await homeUrl(env, id, r2Key, 'PUT', filename, filesize)

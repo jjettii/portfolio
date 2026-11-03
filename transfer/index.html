@@ -1251,7 +1251,7 @@ async function doSingleUpload(pass, desc, bar, label, errEl, provider) {
   const createResp = await fetch(`${WORKER_URL}/api/transfer/create`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
-    body: JSON.stringify({ filename: file.name, filesize: file.size, description: desc, password: pass, storage_provider: provider }),
+    body: JSON.stringify({ filename: file.name, filesize: file.size, name: desc, password: pass, storage_provider: provider }),
   });
 
   if (!createResp.ok) {

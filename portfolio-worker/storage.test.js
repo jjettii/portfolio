@@ -81,6 +81,31 @@ test('Cloudflare remains default, homeserver single upload/download stays behind
   } finally { t.close(); }
 });
 
+test('single-file transfers save the entered name and keep the original upload key', async () => {
+  const t = setup();
+  try {
+    for (const storage_provider of ['cloudflare', 'homeserver']) {
+      const response = await t.api('transfer/create', 'POST', {
+        filename: 'Amber Jordan - Eagle Ridge.zip', name: ' eagle ridge ',
+        filesize: 81000000, password: 'pass', storage_provider,
+      });
+      assert.equal(response.status, 200);
+      const { id, uploadUrl } = await response.json();
+      const row = t.db.prepare('SELECT * FROM transfers WHERE id = ?').get(id);
+      assert.equal(row.filename, 'eagle ridge');
+      if (storage_provider === 'cloudflare') {
+        assert.equal(row.r2_key, `transfers/${id}/Amber Jordan - Eagle Ridge.zip`);
+        assert.equal(decodeURIComponent(new URL(uploadUrl).pathname).endsWith(row.r2_key), true);
+      }
+      const detail = await (await t.api(`transfer/${id}`)).json();
+      assert.equal(detail.filename, 'eagle ridge');
+    }
+    const list = await (await t.api('transfers')).json();
+    assert.equal(list.length, 2);
+    assert.ok(list.every(transfer => transfer.filename === 'eagle ridge'));
+  } finally { t.close(); }
+});
+
 test('folder files inherit hosting, pending uploads stay hidden, deletion waits for disk success', async () => {
   const t = setup();
   try {
