@@ -157,6 +157,7 @@
       text-overflow: ellipsis;
     }
     .rv-thumb-meta { font-size: 12px; font-weight: 300; color: #888; }
+    .rv-new-count { color: #2469cc; }
     .rv-thumb-desc { font-size: 12px; font-weight: 300; color: #666; margin-top: 4px; }
     .rv-empty {
       text-align: center;
@@ -287,19 +288,25 @@
       color: #333;
       line-height: 1.5;
     }
-    .rv-comment-delete {
-      display: none;
-      background: none;
-      border: none;
-      font-family: 'AkzidenzGrotesk', sans-serif;
+    .rv-comment-new {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 2px 6px;
+      background: #2469cc;
+      color: #fff;
       font-size: 11px;
-      color: #aaa;
-      cursor: pointer;
-      padding: 0;
-      margin-top: 6px;
-      transition: color 0.2s;
     }
-    .rv-comment-delete:hover { color: #c00; }
+    .rv-comment-actions { display: flex; gap: 6px; margin-top: 6px; }
+    .rv-comment-action {
+      width: 28px; height: 28px; padding: 0;
+      border: 1px solid #000; background: #fff; color: #000;
+      font-size: 18px; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .rv-comment-action.completed { background: #258443; border-color: transparent; color: #fff; }
+    .rv-comment-action.rv-comment-delete { background: #000; color: #fff; }
+    .rv-comment-action:disabled { opacity: 0.5; cursor: wait; }
+    .rv-comment-action:focus-visible { outline: 2px solid #2469cc; outline-offset: 2px; }
     .rv-comment-form {
       border-top: 1px solid #e0e0e0;
       padding: 16px 20px;
@@ -779,6 +786,7 @@ function renderAdminReviewList(sessions) {
           ${s.video_count} video${s.video_count !== 1 ? 's' : ''}
           · ${new Date(s.created_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}
         </div>
+        ${s.new_comment_count > 0 ? `<div class="rv-review-meta rv-new-count">${s.new_comment_count} new comment${s.new_comment_count === 1 ? '' : 's'}</div>` : ''}
       </div>
       <div class="rv-review-actions">
         <button class="rv-btn rv-btn-sm rv-btn-ghost"
@@ -947,6 +955,7 @@ function renderVideoGrid(videos) {
         <div class="rv-thumb-title">${esc(v.title)}</div>
         <div class="rv-thumb-meta">${new Date(v.created_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
         ${v.description ? `<div class="rv-thumb-desc">${esc(v.description)}</div>` : ''}
+        ${adminToken ? `<div class="rv-thumb-meta" style="margin-top:10px">${v.comment_count ?? 0} comments<br>${v.new_comment_count > 0 ? `<span class="rv-new-count">${v.new_comment_count} new</span>, ` : ''}${v.completed_comment_count ?? 0} completed</div>` : ''}
         ${adminToken ? `<button class="rv-btn rv-btn-sm rv-btn-danger" style="margin-top:10px;width:100%" onclick="deleteSessionVideo(event,'${esc(v.stream_uid)}','${esc(v.title)}')">Delete</button>` : ''}
       </div>
     </div>
@@ -1106,7 +1115,10 @@ async function loadComments(videoId) {
   list.innerHTML = '<p class="rv-notice" style="padding:20px">Loading…</p>';
 
   try {
-    const resp = await fetch(`${WORKER_URL}/api/comments/${encodeURIComponent(videoId)}`);
+    const resp = await fetch(`${WORKER_URL}/api/comments/${encodeURIComponent(videoId)}`, {
+      headers: adminToken ? { Authorization: `Bearer ${adminToken}` } : {},
+    });
+    if (!resp.ok) throw new Error('Could not load comments');
     commentsCache = await resp.json();
     renderComments();
   } catch {
@@ -1122,17 +1134,57 @@ function renderComments() {
   }
 
   list.innerHTML = commentsCache.map(c => `
-    <div class="rv-comment" id="comment-${c.id}" onclick="seekTo(${c.timestamp_seconds})">
+    <div class="rv-comment" id="comment-${c.id}" onclick="selectComment(${c.id})">
       <span class="rv-comment-ts">${formatTime(c.timestamp_seconds)}</span>
+      ${adminToken && !c.admin_seen ? '<span class="rv-comment-new">New</span>' : ''}
       <div class="rv-comment-author">${esc(c.author)}</div>
       <div class="rv-comment-body">${esc(c.body)}</div>
-      ${adminToken ? `<button class="rv-comment-delete" onclick="deleteComment(event,${c.id})">Delete</button>` : ''}
+      ${adminToken ? `<div class="rv-comment-actions">
+        <button class="rv-comment-action${c.completed ? ' completed' : ''}" aria-label="${c.completed ? 'Mark incomplete' : 'Mark complete'}" aria-pressed="${!!c.completed}" title="${c.completed ? 'Mark incomplete' : 'Mark complete'}" onclick="toggleCommentComplete(event,${c.id})">&#10003;</button>
+        <button class="rv-comment-action rv-comment-delete" aria-label="Delete comment" title="Delete comment" onclick="deleteComment(event,${c.id})">&#215;</button>
+      </div>` : ''}
     </div>
   `).join('');
 
-  if (adminToken) {
-    list.querySelectorAll('.rv-comment-delete').forEach(b => b.style.display = 'block');
-  }
+}
+
+async function updateCommentStatus(id, status) {
+  const resp = await fetch(`${WORKER_URL}/api/comments/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+    body: JSON.stringify(status),
+  });
+  if (!resp.ok) throw new Error('Could not save comment status. Please try again.');
+}
+
+async function selectComment(id) {
+  const comment = commentsCache.find(c => c.id === id);
+  if (!comment) return;
+  seekTo(comment.timestamp_seconds);
+  if (!adminToken || comment.admin_seen) return;
+  try {
+    await updateCommentStatus(id, { admin_seen: true });
+    comment.admin_seen = 1;
+    document.getElementById(`comment-${id}`)?.querySelector('.rv-comment-new')?.remove();
+  } catch (err) { alert(err.message); }
+}
+
+async function toggleCommentComplete(event, id) {
+  event.stopPropagation();
+  const comment = commentsCache.find(c => c.id === id);
+  if (!adminToken || !comment) return;
+  const button = event.currentTarget;
+  button.disabled = true;
+  try {
+    const completed = !comment.completed;
+    await updateCommentStatus(id, { completed });
+    comment.completed = Number(completed);
+    button.classList.toggle('completed', completed);
+    button.setAttribute('aria-pressed', String(completed));
+    button.title = completed ? 'Mark incomplete' : 'Mark complete';
+    button.setAttribute('aria-label', button.title);
+  } catch (err) { alert(err.message); }
+  finally { button.disabled = false; }
 }
 
 async function submitComment() {

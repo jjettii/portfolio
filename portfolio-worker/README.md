@@ -23,6 +23,24 @@ The fetch adapter must use redirect: 'manual', then reject non-2xx responses. Cl
 
 ## Validate and deploy
 
+Comment status changes require `migrations/0002_comment_status.sql` to be applied to D1 before deploying the Worker and review frontend. This adds persistent admin read/completion flags; existing comments start as unread and incomplete. Apply only this new migration, without replaying migration 0001. Status and counts are returned only to authenticated admins.
+
+## Comment email digests
+
+**Deferred by owner on 2026-11-03. Keep sending disabled.** The Cloudflare dashboard reports that Email Sending requires Workers Paid, and the owner declined an upgrade. A free provider such as Resend can be considered later; recheck pricing and configure its server-side credentials and sending subdomain before switching the sender implementation. Proton remains the mailbox provider. No sending-domain DNS changes or test digest delivery have been completed. See the handoff TODO at the top of `digests.js`.
+
+The database trigger continues to accumulate pending comments while delivery is disabled. Before future activation, explicitly choose whether to deliver or discard that backlog; do not enable blindly and send months-old feedback. Retain existing comment data and read/completion statuses.
+
+`migrations/0003_comment_digests.sql` queues future comments atomically through an insert trigger. Existing comments are not backfilled. Each project has its own 30-minute quiet period, reset by comments on any of its videos. A once-per-minute scheduled handler sends pending comments grouped by video to the fixed admin recipient, regardless of read/completion status. Email delivery does not change those statuses. Deleted comments are omitted; deleted projects are cleaned from the queue.
+
+Configure `COMMENT_DIGEST_TO`, `COMMENT_DIGEST_FROM`, `REVIEW_SITE_URL`, and the `COMMENT_EMAIL` send binding. Verify the recipient in Cloudflare and onboard the sending subdomain `notify.jordanettinger.com` in Email Sending. Preserve the main domain's Proton MX records and email authentication. Set `COMMENT_DIGEST_ENABLED` to `true` only after sending is configured and tested; it defaults to `false` during setup. The binding restricts recipients to `mail@jordanettinger.com`.
+
+Apply migration 0003 after backing up D1 and checking the schema. Apply only unapplied files, since migration 0001 is not registered in migration history. The sender processes at most 10 projects per invocation; additional projects wait for the next minute. Email previews include up to 100 comments with each body capped at 4,000 characters and link to the full project. Failed batches stay queued for retry after five minutes, and a 15-minute lease prevents overlapping sends. Delivery is at least once: a crash after the email provider accepts a message but before D1 records completion can result in a duplicate digest.
+
+Run `npm test` in `portfolio-worker` to verify quiet periods, project independence, batching, retry, overlapping invocations, deleted content, and admin status privacy.
+
+Setup status (2026-11-03): D1 was backed up to the local temporary directory, migrations 0002 and 0003 were applied, and Worker version `d2ebd52b-ae36-4b34-a04c-24dc7df5eacd` was deployed with the minute schedule and sending disabled. The recipient `mail@jordanettinger.com` is verified. Email Sending list/settings/enable operations returned Cloudflare error 2036 (Unauthorized), so sender onboarding and a real delivery test remain pending. Main-domain Email Routing remains disabled/unconfigured; no Proton DNS records were changed. All 11 backend tests passed. The review frontend changes have not been published by this deployment.
+
 From the repository root with Node 24:
 
 ```sh

@@ -1,0 +1,2 @@
+# Preserve the LF endings used by the Worker source, tests, and migrations.
+* text=auto eol=lf

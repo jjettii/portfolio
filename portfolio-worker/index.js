@@ -1,4 +1,5 @@
 import { StorageError, provider, validateFile, home, homeUrl, readyFiles, requireCloudflareKey, requireHomeReady } from './storage.js';
+import { sendCommentDigests } from './digests.js';
 var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
@@ -947,7 +948,9 @@ async function handleReviewList(request, env) {
     return denied;
   const { results } = await env.DB.prepare(
     `SELECT r.id, r.name, r.created_at,
-            COUNT(v.stream_uid) AS video_count
+            COUNT(v.stream_uid) AS video_count,
+            (SELECT COUNT(*) FROM comments c JOIN videos cv ON cv.stream_uid = c.video_id
+             WHERE cv.review_id = r.id AND c.admin_seen = 0) AS new_comment_count
      FROM reviews r
      LEFT JOIN videos v ON v.review_id = r.id
      GROUP BY r.id
@@ -1041,7 +1044,10 @@ async function handleReviewVideos(request, env, id) {
       return json({ error: "Invalid password" }, 403);
   }
   const { results } = await env.DB.prepare(
-    `SELECT stream_uid, title, description, created_at
+    `SELECT stream_uid, title, description, created_at${isAdmin(request, env) ? `,
+       (SELECT COUNT(*) FROM comments c WHERE c.video_id = videos.stream_uid) AS comment_count,
+       (SELECT COUNT(*) FROM comments c WHERE c.video_id = videos.stream_uid AND c.admin_seen = 0) AS new_comment_count,
+       (SELECT COUNT(*) FROM comments c WHERE c.video_id = videos.stream_uid AND c.completed = 1) AS completed_comment_count` : ''}
      FROM videos WHERE review_id = ? ORDER BY created_at ASC`
   ).bind(id).all();
   return json(results);
@@ -1167,12 +1173,32 @@ async function handleCommentCreate(request, env) {
 __name(handleCommentCreate, "handleCommentCreate");
 async function handleCommentList(request, env, videoId) {
   const { results } = await env.DB.prepare(
-    `SELECT id, timestamp_seconds, author, body, created_at
+    `SELECT id, timestamp_seconds, author, body, created_at${isAdmin(request, env) ? ', admin_seen, completed' : ''}
      FROM comments WHERE video_id = ? ORDER BY timestamp_seconds ASC`
   ).bind(videoId).all();
   return json(results);
 }
 __name(handleCommentList, "handleCommentList");
+async function handleCommentUpdate(request, env, id) {
+  const denied = requireAdmin(request, env);
+  if (denied) return denied;
+  let body;
+  try { body = await request.json(); }
+  catch { return json({ error: 'Invalid JSON' }, 400); }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return json({ error: 'Invalid status update' }, 400);
+  const updates = [], values = [];
+  for (const field of ['admin_seen', 'completed']) {
+    if (body[field] === undefined) continue;
+    if (typeof body[field] !== 'boolean') return json({ error: `${field} must be a boolean` }, 400);
+    updates.push(`${field} = ?`);
+    values.push(Number(body[field]));
+  }
+  if (!updates.length) return json({ error: 'No status supplied' }, 400);
+  const { meta } = await env.DB.prepare(`UPDATE comments SET ${updates.join(', ')} WHERE id = ?`)
+    .bind(...values, Number(id)).run();
+  if (!meta.changes) return json({ error: 'Comment not found' }, 404);
+  return json({ ok: true });
+}
 async function handleCommentDelete(request, env, id) {
   const denied = requireAdmin(request, env);
   if (denied)
@@ -1182,6 +1208,9 @@ async function handleCommentDelete(request, env, id) {
 }
 __name(handleCommentDelete, "handleCommentDelete");
 var src_default = {
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(sendCommentDigests(env));
+  },
   async fetch(request, env) {
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: CORS });
@@ -1289,6 +1318,8 @@ var src_default = {
           return await handleCommentList(request, env, id);
         if (method === "DELETE")
           return await handleCommentDelete(request, env, id);
+        if (method === "PATCH")
+          return await handleCommentUpdate(request, env, id);
       }
       return json({ error: "Not found" }, 404);
     } catch (err) {

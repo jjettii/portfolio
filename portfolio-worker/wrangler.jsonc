@@ -5,8 +5,17 @@
   "compatibility_date": "2024-09-23",
   "workers_dev": true,
   "vars": {
-    "R2_BUCKET_NAME": "review-uploads"
+    "R2_BUCKET_NAME": "review-uploads",
+    // Deferred by owner (2026-11-03). Keep disabled; see digests.js TODO before resuming.
+    "COMMENT_DIGEST_ENABLED": "false",
+    "COMMENT_DIGEST_TO": "mail@jordanettinger.com",
+    "COMMENT_DIGEST_FROM": "reviews@notify.jordanettinger.com",
+    "REVIEW_SITE_URL": "https://jordanettinger.com"
   },
+  "triggers": { "crons": ["* * * * *"] },
+  "send_email": [
+    { "name": "COMMENT_EMAIL", "destination_address": "mail@jordanettinger.com" }
+  ],
   "r2_buckets": [
     {
       "binding": "BUCKET",
