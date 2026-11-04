@@ -1038,6 +1038,7 @@ function backToSession() {
   pendingSeek = null;
   document.getElementById('streamPlayer').src = '';
   showPanel('Session');
+  loadSessionVideos();
 }
 
 function openEditVideoModal() {
@@ -1119,8 +1120,21 @@ async function loadComments(videoId) {
       headers: adminToken ? { Authorization: `Bearer ${adminToken}` } : {},
     });
     if (!resp.ok) throw new Error('Could not load comments');
-    commentsCache = await resp.json();
+    const comments = await resp.json();
+    if (currentVideo?.stream_uid !== videoId) return;
+    commentsCache = comments;
     renderComments();
+    if (adminToken) {
+      const results = await Promise.allSettled(comments.filter(c => !c.admin_seen).map(async c => {
+        await updateCommentStatus(c.id, { admin_seen: true });
+        c.admin_seen = 1;
+      }));
+      if (currentVideo?.stream_uid !== videoId || commentsCache !== comments) return;
+      renderComments();
+      if (results.some(result => result.status === 'rejected')) {
+        alert('Some comments could not be marked as seen. Reopen the video to try again.');
+      }
+    }
   } catch {
     list.innerHTML = '<p class="rv-notice" style="padding:20px">Could not load comments.</p>';
   }
@@ -1157,16 +1171,10 @@ async function updateCommentStatus(id, status) {
   if (!resp.ok) throw new Error('Could not save comment status. Please try again.');
 }
 
-async function selectComment(id) {
+function selectComment(id) {
   const comment = commentsCache.find(c => c.id === id);
   if (!comment) return;
   seekTo(comment.timestamp_seconds);
-  if (!adminToken || comment.admin_seen) return;
-  try {
-    await updateCommentStatus(id, { admin_seen: true });
-    comment.admin_seen = 1;
-    document.getElementById(`comment-${id}`)?.querySelector('.rv-comment-new')?.remove();
-  } catch (err) { alert(err.message); }
 }
 
 async function toggleCommentComplete(event, id) {
