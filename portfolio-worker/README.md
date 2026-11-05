@@ -31,6 +31,8 @@ Apply only `migrations/0004_comment_replies.sql` before deploying the updated Wo
 
 Validate with `npm test` in `portfolio-worker`. Back up D1 and inspect the deployed schema before applying the new migration; do not replay earlier migrations. Publish the frontend after the migration and Worker deployment. The disabled email digest setting remains unchanged; future digest previews label replies without a timecode.
 
+Deployment status (2026-11-05): D1 was backed up outside the repository, migration 0004 was applied remotely, and Worker version `39ddd551-1a82-4aed-a390-8ce6c4a90175` was deployed. All 50 existing comments remain; the foreign-key check passed. All 24 automated tests passed, and the live reply route rejects a missing parent without creating data. The frontend is published separately through GitHub Pages; a Git push does not deploy the Worker or migrate D1. Do not replay migration 0004.
+
 ## Comment email digests
 
 **Deferred by owner on 2026-11-03. Keep sending disabled.** The Cloudflare dashboard reports that Email Sending requires Workers Paid, and the owner declined an upgrade. A free provider such as Resend can be considered later; recheck pricing and configure its server-side credentials and sending subdomain before switching the sender implementation. Proton remains the mailbox provider. No sending-domain DNS changes or test digest delivery have been completed. See the handoff TODO at the top of `digests.js`.

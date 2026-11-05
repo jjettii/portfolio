@@ -1,0 +1,2 @@
+# Working proposal templates are source files, not public site assets.
+/_templates/**
