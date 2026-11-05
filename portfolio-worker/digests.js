@@ -35,7 +35,7 @@ export function digestMessage(project, comments, env) {
       videoId = comment.video_id;
       lines.push('', comment.title, '');
     }
-    lines.push(`${comment.author} at ${timecode(comment.timestamp_seconds)}`, comment.body.slice(0, 4000), '');
+    lines.push(comment.parent_id ? `${comment.author} replied` : `${comment.author} at ${timecode(comment.timestamp_seconds)}`, comment.body.slice(0, 4000), '');
   }
   if (comments.length > 100) lines.push('Additional comments are available in the project.');
   lines.push('Opening this email does not mark comments as read.');

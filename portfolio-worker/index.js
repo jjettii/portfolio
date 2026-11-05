@@ -1161,20 +1161,36 @@ async function handleCommentCreate(request, env) {
   } catch {
     return json({ error: "Invalid JSON" }, 400);
   }
-  const { video_id, timestamp_seconds, author, text } = body;
-  if (!video_id || timestamp_seconds == null || !text) {
-    return json({ error: "video_id, timestamp_seconds, and text are required" }, 400);
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return json({ error: 'Invalid comment' }, 400);
+  const { video_id, timestamp_seconds, author, text, parent_id = null } = body;
+  if (typeof video_id !== 'string' || !video_id || typeof text !== 'string' || !text.trim() ||
+      (author != null && typeof author !== 'string')) {
+    return json({ error: 'video_id and non-empty text are required; author must be text' }, 400);
+  }
+  let parentId = null;
+  let timestamp = Number(timestamp_seconds);
+  if (parent_id !== null) {
+    if (!Number.isSafeInteger(parent_id) || parent_id <= 0) return json({ error: 'Invalid parent_id' }, 400);
+    const parent = await env.DB.prepare('SELECT id, video_id, parent_id, timestamp_seconds FROM comments WHERE id = ?')
+      .bind(parent_id).first();
+    if (!parent || parent.video_id !== video_id) return json({ error: 'Comment not found on this video' }, 404);
+    // Keep threads one level deep, including when replying to an existing reply.
+    parentId = parent.parent_id ?? parent.id;
+    timestamp = parent.timestamp_seconds;
+  } else if (timestamp_seconds == null || !Number.isFinite(timestamp) || timestamp < 0) {
+    return json({ error: 'A non-negative timestamp_seconds is required' }, 400);
   }
   const { meta } = await env.DB.prepare(
-    `INSERT INTO comments (video_id, timestamp_seconds, author, body) VALUES (?, ?, ?, ?)`
-  ).bind(video_id, Number(timestamp_seconds), author?.trim() || "Anonymous", text.trim()).run();
+    `INSERT INTO comments (video_id, timestamp_seconds, author, body, parent_id) VALUES (?, ?, ?, ?, ?)`
+  ).bind(video_id, timestamp, author?.trim() || "Anonymous", text.trim(), parentId).run();
   return json({ id: meta.last_row_id }, 201);
 }
 __name(handleCommentCreate, "handleCommentCreate");
 async function handleCommentList(request, env, videoId) {
   const { results } = await env.DB.prepare(
-    `SELECT id, timestamp_seconds, author, body, created_at${isAdmin(request, env) ? ', admin_seen, completed' : ''}
-     FROM comments WHERE video_id = ? ORDER BY timestamp_seconds ASC`
+    `SELECT id, parent_id, CASE WHEN parent_id IS NULL THEN timestamp_seconds ELSE NULL END AS timestamp_seconds,
+       author, body, created_at${isAdmin(request, env) ? ', admin_seen, completed' : ''}
+     FROM comments WHERE video_id = ? ORDER BY comments.timestamp_seconds ASC, created_at ASC, id ASC`
   ).bind(videoId).all();
   return json(results);
 }
@@ -1203,7 +1219,7 @@ async function handleCommentDelete(request, env, id) {
   const denied = requireAdmin(request, env);
   if (denied)
     return denied;
-  await env.DB.prepare(`DELETE FROM comments WHERE id = ?`).bind(Number(id)).run();
+  await env.DB.prepare(`DELETE FROM comments WHERE parent_id = ? OR id = ?`).bind(Number(id), Number(id)).run();
   return json({ ok: true });
 }
 __name(handleCommentDelete, "handleCommentDelete");

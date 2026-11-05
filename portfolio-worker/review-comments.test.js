@@ -41,3 +41,52 @@ test('failed status saves retain new labels and report the failure', async () =>
   assert.deepEqual(comments.map(c => c.admin_seen), [1, 0]);
   assert.equal(alerts.length, 1);
 });
+
+const commentSource = html.slice(html.indexOf('function renderComments('), html.indexOf('async function updateCommentStatus('));
+for (const admin of [false, true]) {
+  test(`threads group replies without timestamps and offer Reply for every comment (${admin})`, () => {
+    const list = { innerHTML: '' };
+    runInNewContext(`${commentSource}\nrenderComments()`, {
+      commentsCache: [
+        { id: 1, author: 'Client', body: 'First note', timestamp_seconds: 8 },
+        { id: 2, parent_id: 1, author: 'Jordan', body: '<reply>', timestamp_seconds: null },
+        { id: 3, author: 'Client', body: 'Second note', timestamp_seconds: 20 },
+        { id: 4, parent_id: 1, author: 'Client', body: 'Follow-up', timestamp_seconds: null },
+      ],
+      adminToken: admin ? 'admin' : null, activeReplyId: null,
+      document: { getElementById: () => list },
+      esc: s => s.replace(/</g, '&lt;').replace(/>/g, '&gt;'),
+      formatTime: seconds => { assert.notEqual(seconds, null); return `0:${seconds}`; },
+    });
+    assert.equal((list.innerHTML.match(/>Reply<\/button>/g) || []).length, 4);
+    assert.equal((list.innerHTML.match(/class="rv-comment-ts"/g) || []).length, 2);
+    assert.equal((list.innerHTML.match(/class="rv-comment rv-comment-reply"/g) || []).length, 2);
+    assert.ok(list.innerHTML.indexOf('comment-4') < list.innerHTML.indexOf('comment-3'));
+    assert.match(list.innerHTML, /&lt;reply&gt;/);
+    assert.equal(list.innerHTML.includes('Delete comment'), admin);
+    assert.doesNotMatch(list.innerHTML, /id="comment-2" onclick/);
+  });
+}
+
+for (const fails of [false, true]) {
+  test(`reply submission omits video time and preserves failed drafts (${fails})`, async () => {
+    const requests = [], alerts = [];
+    let reloads = 0;
+    const context = {
+      replyDraft: ' My reply ', replyAuthor: ' Jordan ', replySubmitting: false, activeReplyId: 2,
+      currentVideo: { stream_uid: 'video' }, WORKER_URL: '',
+      renderComments() {}, document: { getElementById: () => null },
+      fetch: async (url, options) => { requests.push(JSON.parse(options.body)); return { ok: !fails, json: async () => ({ id: 5 }) }; },
+      loadComments: async () => { reloads++; }, alert: message => alerts.push(message),
+      event: { preventDefault() {}, stopPropagation() {} },
+    };
+    const submitSource = commentSource.slice(commentSource.indexOf('async function submitReply('));
+    await runInNewContext(`${submitSource}\nsubmitReply(event, 2)`, context);
+    assert.deepEqual(requests, [{ video_id: 'video', parent_id: 2, author: 'Jordan', text: 'My reply' }]);
+    assert.equal(context.replySubmitting, false);
+    assert.equal(context.replyDraft, fails ? ' My reply ' : '');
+    assert.equal(context.activeReplyId, fails ? 2 : null);
+    assert.equal(reloads, fails ? 0 : 1);
+    assert.equal(alerts.length, fails ? 1 : 0);
+  });
+}

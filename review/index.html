@@ -266,6 +266,23 @@
     }
     .rv-comment:hover { background: #fafafa; }
     .rv-comment.active { background: #f5f5f5; }
+    .rv-comment.rv-comment-reply {
+      margin-left: 12px;
+      border-left: 4px solid #aaa;
+      padding-left: 16px;
+      background: #f6f6f6;
+      cursor: default;
+    }
+    .rv-comment.rv-comment-reply:hover { background: #f1f1f1; }
+    .rv-comment-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+    .rv-comment-action.rv-reply-action {
+      width: auto; padding: 0 8px; border-color: transparent;
+      background: transparent; color: #666; font-size: 11px;
+    }
+    .rv-reply-action:hover { color: #000; text-decoration: underline; }
+    .rv-comment-form.rv-reply-form { padding: 12px 0 0; margin-top: 8px; }
+    .rv-reply-form input { min-width: 0; }
+    .rv-reply-context { font-size: 11px; color: #666; margin-bottom: 8px; overflow-wrap: anywhere; }
     .rv-comment-ts {
       font-size: 11px;
       font-weight: 400;
@@ -644,6 +661,10 @@ let streamPlayer = null;
 let playerReady = false;
 let pendingSeek = null;
 let commentsCache = [];
+let activeReplyId = null;
+let replyDraft = '';
+let replyAuthor = '';
+let replySubmitting = false;
 let editingReviewId = null;
 
 // ─── Panel management ─────────────────────────────────────────────────────────
@@ -1003,6 +1024,9 @@ function openVideo(uid, title, description) {
   document.getElementById('timecode').textContent = '0:00';
   document.getElementById('commentAt').textContent = 'At 0:00';
   document.getElementById('commentText').value = '';
+  activeReplyId = null;
+  replyDraft = '';
+  replySubmitting = false;
   document.getElementById('adminVideoActions').style.display = adminToken ? 'flex' : 'none';
 
   // Give each video a fresh iframe and SDK connection.
@@ -1147,19 +1171,90 @@ function renderComments() {
     return;
   }
 
-  list.innerHTML = commentsCache.map(c => `
-    <div class="rv-comment" id="comment-${c.id}" onclick="selectComment(${c.id})">
-      <span class="rv-comment-ts">${formatTime(c.timestamp_seconds)}</span>
+  const replies = new Map();
+  for (const c of commentsCache) {
+    if (c.parent_id == null) continue;
+    if (!replies.has(c.parent_id)) replies.set(c.parent_id, []);
+    replies.get(c.parent_id).push(c);
+  }
+  const renderComment = c => `
+    <div class="rv-comment${c.parent_id != null ? ' rv-comment-reply' : ''}" id="comment-${c.id}"${c.parent_id == null ? ` onclick="selectComment(${c.id})"` : ''}>
+      ${c.parent_id == null ? `<span class="rv-comment-ts">${formatTime(c.timestamp_seconds)}</span>` : ''}
       ${adminToken && !c.admin_seen ? '<span class="rv-comment-new">New</span>' : ''}
       <div class="rv-comment-author">${esc(c.author)}</div>
       <div class="rv-comment-body">${esc(c.body)}</div>
-      ${adminToken ? `<div class="rv-comment-actions">
+      <div class="rv-comment-actions">
+        <button class="rv-comment-action rv-reply-action" aria-expanded="${activeReplyId === c.id}" aria-controls="reply-form-${c.id}" onclick="openReply(event,${c.id})">Reply</button>
+      ${adminToken ? `
         <button class="rv-comment-action${c.completed ? ' completed' : ''}" aria-label="${c.completed ? 'Mark incomplete' : 'Mark complete'}" aria-pressed="${!!c.completed}" title="${c.completed ? 'Mark incomplete' : 'Mark complete'}" onclick="toggleCommentComplete(event,${c.id})">&#10003;</button>
         <button class="rv-comment-action rv-comment-delete" aria-label="Delete comment" title="Delete comment" onclick="deleteComment(event,${c.id})">&#215;</button>
-      </div>` : ''}
+      ` : ''}
+      </div>
+      <form id="reply-form-${c.id}" class="rv-comment-form rv-reply-form"${activeReplyId === c.id ? '' : ' hidden'} onclick="event.stopPropagation()" onsubmit="submitReply(event,${c.id})">
+        ${activeReplyId === c.id ? `
+        <div class="rv-reply-context">Replying to ${esc(c.author)}</div>
+        <textarea aria-label="Reply to ${esc(c.author)}" placeholder="Write a reply…" required oninput="replyDraft = this.value"${replySubmitting ? ' disabled' : ''}>${esc(replyDraft)}</textarea>
+        <div class="rv-comment-form-row">
+          <input type="text" aria-label="Your name" placeholder="Your name" value="${esc(replyAuthor)}" oninput="replyAuthor = this.value"${replySubmitting ? ' disabled' : ''}>
+          <button class="rv-btn rv-btn-sm" type="submit"${replySubmitting ? ' disabled' : ''}>${replySubmitting ? 'Posting…' : 'Post reply'}</button>
+        </div>
+        <button class="rv-comment-action rv-reply-action" type="button" onclick="cancelReply(event)"${replySubmitting ? ' disabled' : ''}>Cancel</button>` : ''}
+      </form>
     </div>
-  `).join('');
+  `;
+  list.innerHTML = commentsCache.filter(c => c.parent_id == null).map(c =>
+    `<div class="rv-comment-thread">${renderComment(c)}${(replies.get(c.id) || []).map(renderComment).join('')}</div>`
+  ).join('');
 
+}
+
+function openReply(event, id) {
+  event.stopPropagation();
+  if (replySubmitting) return;
+  activeReplyId = id;
+  replyAuthor = replyAuthor || document.getElementById('commentAuthor').value;
+  renderComments();
+  document.querySelector(`#reply-form-${id} textarea`).focus();
+}
+
+function cancelReply(event) {
+  event.stopPropagation();
+  activeReplyId = null;
+  replyDraft = '';
+  renderComments();
+}
+
+async function submitReply(event, id) {
+  event.preventDefault();
+  event.stopPropagation();
+  const text = replyDraft.trim();
+  if (!text || !currentVideo || replySubmitting) return;
+  const videoId = currentVideo.stream_uid;
+  replySubmitting = true;
+  renderComments();
+  try {
+    const resp = await fetch(`${WORKER_URL}/api/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ video_id: videoId, parent_id: id, author: replyAuthor.trim() || 'Anonymous', text }),
+    });
+    if (!resp.ok) throw new Error('Could not post reply. Please try again.');
+    const data = await resp.json();
+    if (currentVideo?.stream_uid !== videoId) return;
+    activeReplyId = null;
+    replyDraft = '';
+    await loadComments(videoId);
+    document.getElementById(`comment-${data.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch (err) {
+    if (currentVideo?.stream_uid !== videoId) return;
+    alert(err.message);
+    renderComments();
+  } finally {
+    if (currentVideo?.stream_uid === videoId) {
+      replySubmitting = false;
+      renderComments();
+    }
+  }
 }
 
 async function updateCommentStatus(id, status) {
@@ -1173,7 +1268,7 @@ async function updateCommentStatus(id, status) {
 
 function selectComment(id) {
   const comment = commentsCache.find(c => c.id === id);
-  if (!comment) return;
+  if (!comment || comment.parent_id != null) return;
   seekTo(comment.timestamp_seconds);
 }
 
@@ -1225,7 +1320,8 @@ async function submitComment() {
 
 async function deleteComment(e, id) {
   e.stopPropagation();
-  if (!confirm('Delete this comment?')) return;
+  const hasReplies = commentsCache.some(c => c.parent_id === id);
+  if (!confirm(hasReplies ? 'Delete this comment and all its replies?' : 'Delete this comment?')) return;
 
   const resp = await fetch(`${WORKER_URL}/api/comments/${id}`, {
     method: 'DELETE',

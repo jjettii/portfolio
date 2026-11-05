@@ -25,6 +25,12 @@ The fetch adapter must use redirect: 'manual', then reject non-2xx responses. Cl
 
 Comment status changes require `migrations/0002_comment_status.sql` to be applied to D1 before deploying the Worker and review frontend. This adds persistent admin read/completion flags; existing comments start as unread and incomplete. Apply only this new migration, without replaying migration 0001. Status and counts are returned only to authenticated admins.
 
+## Comment replies
+
+Apply only `migrations/0004_comment_replies.sql` before deploying the updated Worker and review frontend. It adds a nullable parent reference and index without changing existing comments. Replies share a single indentation level beneath their original comment, including replies to replies. The existing non-null database time column inherits the thread time for internal ordering; the API returns null for reply timestamps and the interface never displays or seeks them. Both clients and admins can post replies through the existing comment route. Read/completion flags remain admin-only. Deleting a parent also deletes its replies, with confirmation in the interface. Replies contribute to existing comment/new/completed counts.
+
+Validate with `npm test` in `portfolio-worker`. Back up D1 and inspect the deployed schema before applying the new migration; do not replay earlier migrations. Publish the frontend after the migration and Worker deployment. The disabled email digest setting remains unchanged; future digest previews label replies without a timecode.
+
 ## Comment email digests
 
 **Deferred by owner on 2026-11-03. Keep sending disabled.** The Cloudflare dashboard reports that Email Sending requires Workers Paid, and the owner declined an upgrade. A free provider such as Resend can be considered later; recheck pricing and configure its server-side credentials and sending subdomain before switching the sender implementation. Proton remains the mailbox provider. No sending-domain DNS changes or test digest delivery have been completed. See the handoff TODO at the top of `digests.js`.

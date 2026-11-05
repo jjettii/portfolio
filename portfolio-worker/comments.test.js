@@ -12,6 +12,8 @@ test('comment status persists, updates video counts, and stays private to admins
     CREATE TABLE reviews (id TEXT, password_hash TEXT, name TEXT, created_at TEXT);
     INSERT INTO videos VALUES ('video', 'Cut 1', '', '2026-11-03', 'project');`);
   db.exec(readFileSync(new URL('./migrations/0002_comment_status.sql', import.meta.url), 'utf8'));
+  db.exec(readFileSync(new URL('./migrations/0003_comment_digests.sql', import.meta.url), 'utf8'));
+  db.exec(readFileSync(new URL('./migrations/0004_comment_replies.sql', import.meta.url), 'utf8'));
   const env = { ADMIN_SECRET: 'admin', DB: { prepare(sql) {
     let args = [];
     return { bind(...values) { args = values; return this; },
@@ -62,6 +64,34 @@ test('comment status persists, updates video counts, and stays private to admins
     await api(`comments/${id}`, 'PATCH', { completed: false });
     assert.deepEqual(await counts(), [1, 0, 0]);
     assert.equal((await api('comments/999', 'PATCH', { completed: true })).status, 404);
+    for (const admin of [false, true]) {
+      const response = await api('comments', 'POST', { video_id: 'video', parent_id: id, text: 'A reply', author: 'Reviewer' }, admin);
+      assert.equal(response.status, 201);
+    }
+    const thread = await (await api('comments/video', 'GET', undefined, false)).json();
+    assert.equal(thread.length, 3);
+    assert.equal(thread[0].parent_id, null);
+    assert.equal(thread[0].timestamp_seconds, 8);
+    for (const reply of thread.slice(1)) {
+      assert.equal(reply.parent_id, id);
+      assert.equal(reply.timestamp_seconds, null);
+      assert.equal('admin_seen' in reply, false);
+      assert.equal('completed' in reply, false);
+    }
+    const nested = await api('comments', 'POST', { video_id: 'video', parent_id: thread[1].id, text: 'Reply to reply' }, false);
+    assert.equal(nested.status, 201);
+    const nestedId = (await nested.json()).id;
+    assert.equal((await (await api('comments/video')).json()).find(c => c.id === nestedId).parent_id, id);
+    assert.deepEqual(await counts(), [4, 3, 0]);
+    for (const parent_id of [0, -1, '1', 1.5]) {
+      assert.equal((await api('comments', 'POST', { video_id: 'video', parent_id, text: 'Invalid' }, false)).status, 400);
+    }
+    assert.equal((await api('comments', 'POST', { video_id: 'other-video', parent_id: id, text: 'Wrong video' }, false)).status, 404);
+    assert.equal((await api('comments', 'POST', { video_id: 'video', parent_id: 9999, text: 'Missing parent' }, false)).status, 404);
+    assert.equal((await api('comments', 'POST', { video_id: 'video', parent_id: id, text: '  ' }, false)).status, 400);
+    assert.equal((await api(`comments/${thread[1].id}`, 'DELETE', undefined, false)).status, 401);
+    await api(`comments/${thread[1].id}`, 'DELETE');
+    assert.deepEqual(await counts(), [3, 2, 0]);
     await api(`comments/${id}`, 'DELETE');
     assert.deepEqual(await counts(), [0, 0, 0]);
   } finally { db.close(); }

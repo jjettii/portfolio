@@ -15,6 +15,7 @@ function setup() {
     INSERT INTO comments (video_id, timestamp_seconds, author, body) VALUES ('a1',8,'Michael','Old comment');`);
   db.exec(readFileSync(new URL('./migrations/0002_comment_status.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('./migrations/0003_comment_digests.sql', import.meta.url), 'utf8'));
+  db.exec(readFileSync(new URL('./migrations/0004_comment_replies.sql', import.meta.url), 'utf8'));
   const messages = [];
   const env = { COMMENT_DIGEST_ENABLED: 'true', COMMENT_DIGEST_TO: 'owner@example.com',
     COMMENT_DIGEST_FROM: 'reviews@notify.example.com', REVIEW_SITE_URL: 'https://example.com',
