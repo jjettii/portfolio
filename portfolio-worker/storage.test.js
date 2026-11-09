@@ -81,7 +81,7 @@ test('Cloudflare remains default, homeserver single upload/download stays behind
   } finally { t.close(); }
 });
 
-test('single-file transfers save the entered name and keep the original upload key', async () => {
+test('single-file transfers keep display names separate from download filenames', async () => {
   const t = setup();
   try {
     for (const storage_provider of ['cloudflare', 'homeserver']) {
@@ -92,17 +92,50 @@ test('single-file transfers save the entered name and keep the original upload k
       assert.equal(response.status, 200);
       const { id, uploadUrl } = await response.json();
       const row = t.db.prepare('SELECT * FROM transfers WHERE id = ?').get(id);
-      assert.equal(row.filename, 'eagle ridge');
+      assert.equal(row.filename, 'Amber Jordan - Eagle Ridge.zip');
+      assert.equal(row.description, 'eagle ridge');
       if (storage_provider === 'cloudflare') {
         assert.equal(row.r2_key, `transfers/${id}/Amber Jordan - Eagle Ridge.zip`);
         assert.equal(decodeURIComponent(new URL(uploadUrl).pathname).endsWith(row.r2_key), true);
       }
       const detail = await (await t.api(`transfer/${id}`)).json();
       assert.equal(detail.filename, 'eagle ridge');
+      assert.equal(detail.uploaded_filename, 'Amber Jordan - Eagle Ridge.zip');
+      const download = await (await t.api(`transfer/${id}/download?password=pass`, 'GET', undefined, false)).json();
+      assert.equal(download.filename, 'Amber Jordan - Eagle Ridge.zip');
+      if (storage_provider === 'cloudflare') {
+        assert.match(new URL(download.downloadUrl).searchParams.get('response-content-disposition'), /Amber Jordan - Eagle Ridge\.zip/);
+      } else {
+        assert.equal(t.requests.at(-1).body.filename, 'Amber Jordan - Eagle Ridge.zip');
+      }
+      assert.equal((await t.api(`transfer/${id}`, 'PATCH', { name: 'renamed transfer' })).status, 200);
+      const renamed = t.db.prepare('SELECT filename, description FROM transfers WHERE id = ?').get(id);
+      assert.equal(renamed.filename, 'Amber Jordan - Eagle Ridge.zip');
+      assert.equal(renamed.description, 'renamed transfer');
     }
     const list = await (await t.api('transfers')).json();
     assert.equal(list.length, 2);
-    assert.ok(list.every(transfer => transfer.filename === 'eagle ridge'));
+    assert.ok(list.every(transfer => transfer.filename === 'renamed transfer'));
+  } finally { t.close(); }
+});
+
+test('legacy renamed Cloudflare transfers recover the original filename from the object key', async () => {
+  const t = setup();
+  try {
+    const id = 'legacy-transfer';
+    const passwordHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('test-saltpass'));
+    const hash = Array.from(new Uint8Array(passwordHash), byte => byte.toString(16).padStart(2, '0')).join('');
+    t.db.prepare(`INSERT INTO transfers
+      (id, filename, filesize, r2_key, password_hash, description, storage_provider)
+      VALUES (?, ?, ?, ?, ?, NULL, 'cloudflare')`
+    ).run(id, 'Windsor Plywood Drone Photos', 123, `transfers/${id}/windsor.zip`, hash);
+
+    const download = await (await t.api(`transfer/${id}/download?password=pass`, 'GET', undefined, false)).json();
+    assert.equal(download.filename, 'windsor.zip');
+    assert.match(new URL(download.downloadUrl).searchParams.get('response-content-disposition'), /windsor\.zip/);
+    const detail = await (await t.api(`transfer/${id}`)).json();
+    assert.equal(detail.filename, 'Windsor Plywood Drone Photos');
+    assert.equal(detail.uploaded_filename, 'windsor.zip');
   } finally { t.close(); }
 });
 

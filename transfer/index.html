@@ -656,8 +656,9 @@ async function lookupTransfer() {
       ? 'Uploaded ' + new Date(data.created_at).toLocaleDateString('en-CA', { month: 'long', day: 'numeric', year: 'numeric' })
       : '';
     const descEl = document.getElementById('dlDesc');
-    descEl.textContent = data.description || '';
-    descEl.style.display = data.description ? 'block' : 'none';
+    const description = data.description && data.description !== data.filename ? data.description : '';
+    descEl.textContent = description;
+    descEl.style.display = description ? 'block' : 'none';
 
     document.getElementById('dlForm').style.display = 'none';
     document.getElementById('dlInfo').style.display = 'block';
@@ -946,7 +947,7 @@ async function saveDetailName() {
   const resp = await fetch(`${WORKER_URL}/api/transfer/${encodeURIComponent(currentDetailId)}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
-    body: JSON.stringify({ filename: name }),
+    body: JSON.stringify({ name }),
   });
   if (resp.ok) {
     okEl.style.display = 'block';
