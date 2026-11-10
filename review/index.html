@@ -135,6 +135,9 @@
       gap: 20px;
     }
     .rv-thumb {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
       cursor: pointer;
       border: 1px solid #e0e0e0;
       transition: border-color 0.2s;
@@ -147,7 +150,9 @@
       display: block;
       background: #111;
     }
-    .rv-thumb-body { padding: 14px; }
+    .rv-thumb-body { padding: 14px; display: flex; flex-direction: column; flex: 1; }
+    .rv-thumb-footer { margin-top: auto; padding-top: 10px; }
+    .rv-thumb-footer .rv-btn { margin-top: 10px; width: 100%; }
     .rv-thumb-title {
       font-size: 14px;
       font-weight: 400;
@@ -180,12 +185,17 @@
       flex-direction: column;
       overflow: hidden;
     }
-    .rv-player-top {
+    .rv-player-top,
+    .rv-sidebar-head {
       display: flex;
       align-items: center;
+      flex: 0 0 60px;
+      height: 60px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .rv-player-top {
       gap: 16px;
       padding: 16px 24px;
-      border-bottom: 1px solid #e0e0e0;
     }
     .rv-back-btn {
       background: none;
@@ -247,7 +257,6 @@
     }
     .rv-sidebar-head {
       padding: 16px 20px;
-      border-bottom: 1px solid #e0e0e0;
       font-size: 12px;
       font-weight: 400;
       letter-spacing: 0.5px;
@@ -438,7 +447,8 @@
     .rv-auth-box h2 { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
 
     @media (max-width: 768px) {
-      .rv-header { padding: 18px 20px; }
+      .rv-header { padding: 18px 20px; flex-wrap: wrap; gap: 14px; }
+      .rv-header-actions { flex-wrap: wrap; }
       .rv-gate-wrap { padding: 60px 20px; }
       .rv-admin-wrap { padding: 32px 20px; }
       .rv-session-wrap { padding: 32px 20px; }
@@ -582,11 +592,11 @@
 
     <div class="rv-field">
       <label class="rv-label" for="upTitle">Video Title</label>
-      <input class="rv-input" type="text" id="upTitle" placeholder="e.g. Havn Saunas — Rough Cut v2">
+      <input class="rv-input" type="text" id="upTitle">
     </div>
     <div class="rv-field">
       <label class="rv-label" for="upDescription">Description (optional)</label>
-      <input class="rv-input" type="text" id="upDescription" placeholder="Notes for the client">
+      <input class="rv-input" type="text" id="upDescription">
     </div>
     <div class="rv-field">
       <label class="rv-label" for="upVideoFile">Video File</label>
@@ -686,6 +696,8 @@ function updateHeader(panel) {
   } else if (panel === 'Session') {
     ha.innerHTML = `
       <button class="rv-btn rv-btn-sm" onclick="openUploadModal()">+ Upload Video</button>
+      <button class="rv-btn rv-btn-ghost rv-btn-sm" onclick="copyReviewLink(currentSession.id, this)">Copy link</button>
+      <button class="rv-btn rv-btn-ghost rv-btn-sm" onclick="openEditReviewModal(currentSession.id, currentSession.name)">Edit</button>
       <button class="rv-btn rv-btn-ghost rv-btn-sm" onclick="goToAdmin()">All Projects</button>
       ${signOut}
     `;
@@ -927,7 +939,12 @@ async function saveReview() {
     }
 
     closeReviewModal();
-    await goToAdmin();
+    if (editingReviewId && document.getElementById('panelSession').classList.contains('active')) {
+      currentSession.name = name;
+      document.getElementById('sessionTitle').textContent = name;
+    } else {
+      await goToAdmin();
+    }
   } catch {
     showErr(errEl, 'Network error.');
   } finally {
@@ -976,8 +993,10 @@ function renderVideoGrid(videos) {
         <div class="rv-thumb-title">${esc(v.title)}</div>
         <div class="rv-thumb-meta">${new Date(v.created_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
         ${v.description ? `<div class="rv-thumb-desc">${esc(v.description)}</div>` : ''}
-        ${adminToken ? `<div class="rv-thumb-meta" style="margin-top:10px">${v.comment_count ?? 0} comments<br>${v.new_comment_count > 0 ? `<span class="rv-new-count">${v.new_comment_count} new</span>, ` : ''}${v.completed_comment_count ?? 0} completed</div>` : ''}
-        ${adminToken ? `<button class="rv-btn rv-btn-sm rv-btn-danger" style="margin-top:10px;width:100%" onclick="deleteSessionVideo(event,'${esc(v.stream_uid)}','${esc(v.title)}')">Delete</button>` : ''}
+        ${adminToken ? `<div class="rv-thumb-footer">
+          <div class="rv-thumb-meta">${v.comment_count ?? 0} comments<br>${v.new_comment_count > 0 ? `<span class="rv-new-count">${v.new_comment_count} new</span>, ` : ''}${v.completed_comment_count ?? 0} completed</div>
+          <button class="rv-btn rv-btn-sm rv-btn-danger" onclick="deleteSessionVideo(event,'${esc(v.stream_uid)}','${esc(v.title)}')">Delete</button>
+        </div>` : ''}
       </div>
     </div>
   `).join('');

@@ -1,4 +1,5 @@
 /tmp/
+/.pages-dist/
 /portfolio-worker/node_modules/
 /portfolio-worker/.wrangler/
 /portfolio-worker/tmp/
