@@ -417,7 +417,7 @@ async function streamZipDownload(env, files, zipName) {
   return new Response(readable, {
     headers: {
       "Content-Type": "application/zip",
-      "Content-Disposition": `attachment; filename="${safeName}.zip"`,
+      "Content-Disposition": contentDisposition(`${safeName}.zip`),
       ...CORS
     }
   });
@@ -437,6 +437,26 @@ function json(data, status = 200) {
   });
 }
 __name(json, "json");
+function filenameFromR2Key(r2Key, fallback = "download") {
+  const leaf = String(r2Key || "").split("/").pop();
+  return leaf || fallback;
+}
+__name(filenameFromR2Key, "filenameFromR2Key");
+function contentDisposition(filename) {
+  const original = String(filename || "download");
+  const ascii = original.normalize("NFKD").replace(/[^\x20-\x7E]/g, "").replace(/["\\]/g, "_") || "download";
+  const encoded = encodeURIComponent(original).replace(/['()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
+  return `attachment; filename="${ascii}"; filename*=UTF-8''${encoded}`;
+}
+__name(contentDisposition, "contentDisposition");
+function transferName(row) {
+  return row.description || row.filename || "Files";
+}
+__name(transferName, "transferName");
+function originalFilename(row) {
+  return row.storage_provider === "cloudflare" ? filenameFromR2Key(row.r2_key, row.filename) : row.filename;
+}
+__name(originalFilename, "originalFilename");
 function isAdmin(request, env) {
   const auth = request.headers.get("Authorization") || "";
   return auth === `Bearer ${env.ADMIN_SECRET}`;
@@ -498,7 +518,7 @@ async function handleTransferCreate(request, env) {
   await env.DB.prepare(
     `INSERT INTO transfers (id, filename, filesize, r2_key, password_hash, description, storage_provider)
      VALUES (?, ?, ?, ?, ?, ?, ?)`
-  ).bind(id, typeof name === 'string' && name.trim() ? name.trim() : filename, filesize ?? null, r2Key, passwordHash, description || null, storage).run();
+  ).bind(id, filename, filesize ?? null, r2Key, passwordHash, typeof name === "string" && name.trim() ? name.trim() : description || filename, storage).run();
   if (storage === 'homeserver') await home(env, '/v1/transfers/' + id, 'POST', {});
   const uploadUrl = storage === 'homeserver'
     ? await homeUrl(env, id, r2Key, 'PUT', filename, filesize)
@@ -521,7 +541,8 @@ async function handleTransferInfo(request, env, id) {
     return json({
       id: row2.id,
       storage_provider: row2.storage_provider,
-      filename: row2.filename,
+      filename: transferName(row2),
+      uploaded_filename: isMulti2 ? null : originalFilename(row2),
       filesize: isMulti2 ? row2.total_size : row2.filesize,
       description: row2.description,
       created_at: row2.created_at,
@@ -547,7 +568,8 @@ async function handleTransferInfo(request, env, id) {
   const isMulti = fileCount > 0 || !row.r2_key;
   return json({
     id: row.id,
-    filename: row.filename,
+    filename: transferName(row),
+    uploaded_filename: isMulti ? null : originalFilename(row),
     filesize: isMulti ? row.total_size : row.filesize,
     description: row.description,
     created_at: row.created_at,
@@ -570,17 +592,19 @@ async function handleTransferDownload(request, env, id) {
   if (row.storage_deleting) return json({ error: 'Transfer is being deleted' }, 409);
   if (row.storage_provider === 'homeserver') {
     if (!row.r2_key) return json({ error: 'Use the individual file download links for this transfer' }, 400);
-    const downloadUrl = await homeUrl(env, id, row.r2_key, 'GET', row.filename);
-    return json({ downloadUrl, filename: row.filename });
+    const filename = originalFilename(row);
+    const downloadUrl = await homeUrl(env, id, row.r2_key, 'GET', filename);
+    return json({ downloadUrl, filename });
   }
   const { results: files } = await env.DB.prepare(
     `SELECT filename, r2_key, crc32 FROM transfer_files WHERE transfer_id = ? ORDER BY sort_order ASC`
   ).bind(id).all();
   if (files.length > 0) {
-    return streamZipDownload(env, files, row.filename);
+    return streamZipDownload(env, files, transferName(row));
   }
-  const downloadUrl = await getPresignedUrl(env, row.r2_key, "GET", DOWNLOAD_EXPIRY, `attachment; filename="${row.filename}"`);
-  return json({ downloadUrl, filename: row.filename });
+  const filename = originalFilename(row);
+  const downloadUrl = await getPresignedUrl(env, row.r2_key, "GET", DOWNLOAD_EXPIRY, contentDisposition(filename));
+  return json({ downloadUrl, filename });
 }
 __name(handleTransferDownload, "handleTransferDownload");
 async function handleTransferList(request, env) {
@@ -595,7 +619,7 @@ async function handleTransferList(request, env) {
      GROUP BY t.id
      ORDER BY t.created_at DESC`
   ).all();
-  return json(results);
+  return json(results.map((row) => ({ ...row, filename: transferName(row) })));
 }
 __name(handleTransferList, "handleTransferList");
 async function handleTransferDelete(request, env, id) {
@@ -642,9 +666,13 @@ async function handleTransferUpdate(request, env, id) {
     return json({ error: "Transfer not found" }, 404);
   const updates = [];
   const values = [];
-  if (body.filename !== void 0) {
-    updates.push("filename = ?");
-    values.push(body.filename);
+  const requestedName = body.name !== void 0 ? body.name : body.filename;
+  if (requestedName !== void 0) {
+    const name = String(requestedName).trim();
+    if (!name)
+      return json({ error: "Name cannot be empty" }, 400);
+    updates.push("description = ?");
+    values.push(name);
   }
   if (body.password) {
     updates.push("password_hash = ?");
@@ -742,7 +770,7 @@ async function handleTransferFileList(request, env, id) {
       f.r2_key,
       "GET",
       DOWNLOAD_EXPIRY,
-      `attachment; filename="${leafName}"`
+      contentDisposition(leafName)
     );
     return { filename: f.filename, filesize: f.filesize, url: downloadUrl };
   }));
@@ -769,7 +797,7 @@ async function handleTransferCreateMulti(request, env) {
   await env.DB.prepare(
     `INSERT INTO transfers (id, filename, filesize, r2_key, password_hash, description, storage_provider)
      VALUES (?, ?, NULL, '', ?, ?, ?)`
-  ).bind(id, name, passwordHash, description || null, storage).run();
+  ).bind(id, name, passwordHash, description || name, storage).run();
   if (storage === 'homeserver') await home(env, '/v1/transfers/' + id, 'POST', {});
   return json({ id, storage_provider: storage });
 }
