@@ -7,6 +7,8 @@
   const clearError = () => show('error', false);
   const size = bytes => `${(bytes / 1000 ** 3).toLocaleString(undefined, { maximumFractionDigits: 2 })} GB`;
   let adminToken = '', clientToken = '', upload, running = false, paused = false, xhr, wakeLock;
+  let editingId = '', originalExpiry = '';
+  const shareLink = id => `https://www.jordanettinger.com/upload/?id=${id}`;
   async function api(route, { token, method = 'GET', body } = {}) {
     const r = await fetch(`${API}/incoming${route}`, { method, headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body ? { 'Content-Type': 'application/json' } : {}),
@@ -17,7 +19,7 @@
   }
   function bind(id, fn) {
     $(id).addEventListener($(id).tagName === 'FORM' ? 'submit' : 'click', async e => {
-      e.preventDefault(); clearError(); const button = $(id).tagName === 'FORM' ? $(id).querySelector('button') : $(id);
+      e.preventDefault(); clearError(); const button = $(id).tagName === 'FORM' ? $(id).querySelector('button[type="submit"]') || $(id).querySelector('button') : $(id);
       button.disabled = true;
       try { await fn(); } catch (e) { error(e); } finally { button.disabled = false; }
     });
@@ -124,6 +126,11 @@
       const state = row.state !== 'complete' && row.expires < Date.now() ? 'Expired' : row.state;
       meta.textContent = `${state} · ${row.id}\n${row.filename || 'Waiting for one ZIP'}${row.size ? ` · ${size(row.size)}` : ''}\nExpires ${new Date(row.expires).toLocaleString()}${row.state === 'uploading' ? `\n${Math.floor(row.offset / row.size * 100)}% received` : ''}`;
       card.append(meta);
+      const edit = document.createElement('button'); edit.textContent = 'Edit invitation'; edit.className = 'secondary';
+      edit.addEventListener('click', async () => {
+        clearError(); edit.disabled = true;
+        try { await openEditor(row.id); } catch (e) { error(e); } finally { edit.disabled = false; }
+      }); card.append(edit);
       if (row.state === 'complete') {
         const download = document.createElement('button'); download.textContent = 'Download ZIP';
         download.addEventListener('click', async () => {
@@ -137,19 +144,51 @@
       remove.addEventListener('click', async () => {
         if (!confirm(`Permanently delete “${row.label}” and its file?`)) return;
         clearError(); remove.disabled = true;
-        try { await api(`/admin/${row.id}`, { token: adminToken, method: 'DELETE' }); await refresh(); }
+        try {
+          await api(`/admin/${row.id}`, { token: adminToken, method: 'DELETE' });
+          if (editingId === row.id) closeEditor();
+          show('newInvite', false); $('shareDetails').value = ''; await refresh();
+        }
         catch (e) { error(e); remove.disabled = false; }
       }); card.append(remove); $('inbox').append(card);
     }
   }
   bind('refresh', refresh);
+  function closeEditor() {
+    editingId = ''; originalExpiry = ''; $('editPassword').value = ''; $('editLink').value = ''; show('editForm', false);
+  }
+  async function openEditor(id) {
+    const row = await api(`/admin/${id}`, { token: adminToken });
+    editingId = id;
+    $('editLabel').value = row.label; $('editPassword').value = ''; $('editLimit').value = row.maxSize / 1000 ** 3;
+    const expiry = new Date(row.expires);
+    originalExpiry = new Date(row.expires - expiry.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    $('editExpires').value = originalExpiry;
+    $('editLink').value = shareLink(id);
+    $('editState').textContent = `${row.id} · ${row.state}${row.state === 'complete' ? ' · This invitation has already been used.' : ''}`;
+    $('editStatus').textContent = ''; show('editForm'); $('editForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  bind('copyEditLink', async () => { await navigator.clipboard.writeText($('editLink').value); $('editStatus').textContent = 'Link copied.'; });
+  $('cancelEdit').addEventListener('click', closeEditor);
+  function showShareDetails(row, password) {
+    $('shareDetails').value = `Upload: ${shareLink(row.id)}\nUpload ID: ${row.id}\n${password === undefined ? 'Password: unchanged (use the password previously shared)' : `Password: ${password}`}\nExpires: ${new Date(row.expires).toLocaleString()}\nPlease send all files in ONE ZIP (maximum ${size(row.maxSize)}).`;
+    show('newInvite'); $('copyStatus').textContent = '';
+  }
+  bind('editForm', async () => {
+    if (!editingId) throw Error('Select an invitation to edit.');
+    const body = { label: $('editLabel').value.trim(), maxSize: Math.round(Number($('editLimit').value) * 1000 ** 3) };
+    if ($('editExpires').value !== originalExpiry) body.expires = new Date($('editExpires').value).getTime();
+    if ($('editPassword').value !== '') body.password = $('editPassword').value;
+    const row = await api(`/admin/${editingId}`, { token: adminToken, method: 'PATCH', body });
+    showShareDetails(row, body.password); closeEditor(); await refresh();
+    $('copyStatus').textContent = 'Changes saved. The upload link stays the same.';
+  });
   bind('createForm', async () => {
-    const row = await api('/admin', { token: adminToken, method: 'POST', body: { label: $('label').value.trim(), days: Number($('days').value), maxSize: Number($('limit').value) * 1000 ** 3 } });
-    $('shareDetails').value = `Upload: https://www.jordanettinger.com/upload/?id=${row.id}\nUpload ID: ${row.id}\nPassword: ${row.password}\nExpires: ${new Date(row.expires).toLocaleString()}\nPlease send all files in ONE ZIP (maximum ${size(row.maxSize)}).`;
-    show('newInvite'); $('copyStatus').textContent = ''; await refresh();
+    const row = await api('/admin', { token: adminToken, method: 'POST', body: { label: $('label').value.trim(), password: $('invitePassword').value, days: Number($('days').value), maxSize: Number($('limit').value) * 1000 ** 3 } });
+    showShareDetails(row, row.password); $('invitePassword').value = ''; await refresh();
   });
   bind('copyInvite', async () => { await navigator.clipboard.writeText($('shareDetails').value); $('copyStatus').textContent = 'Copied.'; });
   $('logout').addEventListener('click', () => {
-    adminToken = ''; $('shareDetails').value = ''; $('inbox').replaceChildren(); show('newInvite', false); show('dashboard', false); show('adminLogin'); clearError();
+    adminToken = ''; $('shareDetails').value = ''; $('invitePassword').value = ''; closeEditor(); $('inbox').replaceChildren(); show('newInvite', false); show('dashboard', false); show('adminLogin'); clearError();
   });
 })();

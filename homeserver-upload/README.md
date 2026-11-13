@@ -4,9 +4,10 @@ This is a separate, dependency-free Node 24 service on the homeserver. The stati
 
 ## Behavior
 
-- Client signs in with an invitation ID and generated 24-character password. Admin gets the password once, with a shareable link. Passwords are salted and scrypt-hashed at rest; the link contains only the ID.
+- Client signs in with an invitation ID and password. Admin may set a custom password when creating an invitation, or leave the field blank to generate a 24-character password. Custom client passwords accept 1–256 characters, including spaces. Admin gets the password once, with a shareable link. Passwords are salted and scrypt-hashed at rest; the link contains only the ID.
 - Each invitation accepts **one ZIP filename**, with one immutable size and content fingerprint. After completion the server rejects further uploads, across browsers and restarts. ZIP files are stored without extraction or execution. Filename extension is checked; this is not antivirus scanning or ZIP integrity verification.
 - Admin creates invitations, lists pending/completed/expired invitations, downloads completed ZIPs (with HTTP Range support), and deletes invitations plus partial/completed data. Separate homeserver admin authentication; you can choose the same password as transfer during installation, but it is configured independently.
+- Each inbox item has **Edit invitation**: rename the client/project, change its password, set expiry within the next 30 days, change the ZIP limit up to 1000 GB, and copy its existing share link. Its ID and link stay the same. Blank edit passwords preserve the current password and client sessions; setting a new password revokes existing client sessions. Clients sign in again to resume their original ZIP without losing committed chunks. Current passwords cannot be retrieved. The limit cannot be reduced below the client's selected ZIP size. Completed invitations remain completed after all edits. Expired invitations that never started can be renewed; expired partial uploads require a new invitation because cleanup may already have removed their bytes.
 - Default limit: 20 GB per invitation, seven-day expiry. Admin may select 1–1000 GB (decimal GB, 1 GB = 1,000,000,000 bytes) and 1–30 days. Existing invitations retain their original byte limits. Default total reservation quota: 500 GiB, configurable. To create a 1000 GB invitation, raise `UPLOAD_QUOTA_BYTES` to at least `1000000000000` and ensure sufficient real free disk capacity. Completed files retain their actual size against quota until deleted; expired invitations release reservations and partial data is cleaned hourly. Completed files are retained until admin deletion. Each chunk checks free disk space with a 256 MiB safety reserve; this service shares disk with other applications, so monitor available space.
 - Password attempts are rate-limited per IP (30/15 minutes), and expensive password derivations have bounded concurrency. Clients can access only their own invitation; admin tokens expire after eight hours, client sessions after seven days. Tokens are held in page memory. CORS allows only the configured website origin. Credentials and signed URLs must not enter access logs.
 - The backend streams sequential 8 MiB chunks to an opaque staging filename with bounded memory, validates exact chunk sizes, flushes each chunk before saving its offset in SQLite, then atomically renames and seals the invitation. No filesystem paths come from client filenames. A single service process owns all writes; **do not run multiple instances against the same data directory**.
@@ -21,11 +22,13 @@ Throughput remains limited by the client's upstream bandwidth, the homeserver's 
 ## Local verification
 
 ```powershell
-node --test --test-isolation=none homeserver-upload/server.test.mjs
+node --test --test-isolation=none homeserver-upload/server.test.mjs upload/admin.test.cjs
 node --check upload/upload.js
 ```
 
 Node 24's built-in SQLite may print an experimental-feature warning. There are no npm dependencies. Integration tests cover authentication and CORS, token scoping, one-time completion, exact/ranged downloads, deletion/revocation, interrupted chunks, restart/resume, crash debris, quota reservation, validation and rate limits.
+
+The editing upgrade adds `auth_version` to the existing SQLite table automatically at startup. It preserves rows, files and offsets and requires no manual SQL. Existing client sessions remain valid until their invitation's password changes. Both the static page and the owner-installed `server.mjs` need updating to enable custom passwords and editing. No Caddy or secret changes are needed.
 
 ## Install on the homeserver (owner-run)
 

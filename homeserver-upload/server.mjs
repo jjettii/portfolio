@@ -27,8 +27,12 @@ export async function createUploadServer(config) {
       id TEXT PRIMARY KEY, label TEXT NOT NULL, salt TEXT NOT NULL, hash TEXT NOT NULL,
       created INTEGER NOT NULL, expires INTEGER NOT NULL, max_size INTEGER NOT NULL,
       state TEXT NOT NULL DEFAULT 'waiting', filename TEXT, size INTEGER, offset INTEGER NOT NULL DEFAULT 0,
-      fingerprint TEXT, completed INTEGER
+      fingerprint TEXT, completed INTEGER, auth_version INTEGER NOT NULL DEFAULT 0
     );`);
+  // Additive upgrade for existing installations; preserves invitations and file offsets.
+  if (!db.prepare('PRAGMA table_info(invites)').all().some(column => column.name === 'auth_version')) {
+    db.exec('ALTER TABLE invites ADD COLUMN auth_version INTEGER NOT NULL DEFAULT 0');
+  }
   const get = id => db.prepare('SELECT * FROM invites WHERE id = ?').get(id);
   const location = (id, ext) => path.join(root, `${id}.${ext}`);
   const locks = new Set();
@@ -57,6 +61,10 @@ export async function createUploadServer(config) {
     let data;
     try { data = JSON.parse(Buffer.from(payload, 'base64url')); } catch { throw fail(401, 'Please sign in again.'); }
     if (data.role !== role || data.exp < Date.now() || (id && data.id !== id)) throw fail(401, 'Please sign in again.');
+    return data;
+  }
+  function validatePassword(password) {
+    if (typeof password !== 'string' || !password.trim() || password.length > 256 || /[\x00-\x1f\x7f]/.test(password)) throw fail(400, 'Use a password of 1–256 characters. Spaces are allowed.');
   }
   const view = row => ({ id: row.id, label: row.label, created: row.created, expires: row.expires, maxSize: row.max_size,
     state: row.state, filename: row.filename, size: row.size, offset: row.offset, fingerprint: row.fingerprint,
@@ -64,7 +72,11 @@ export async function createUploadServer(config) {
   async function json(req) {
     let body = '';
     for await (const part of req) { body += part; if (Buffer.byteLength(body) > 8192) throw fail(413, 'Request too large.'); }
-    try { return JSON.parse(body); } catch { throw fail(400, 'Invalid request.'); }
+    try {
+      const value = JSON.parse(body);
+      if (!value || typeof value !== 'object' || Array.isArray(value)) throw Error('Expected an object');
+      return value;
+    } catch { throw fail(400, 'Invalid request.'); }
   }
   function live(row) {
     if (!row || row.state === 'deleting') throw fail(404, 'Upload not found.');
@@ -114,7 +126,7 @@ export async function createUploadServer(config) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Vary', 'Origin');
       res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, Upload-Offset');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, PUT, DELETE, OPTIONS');
     }
     if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
     try {
@@ -135,9 +147,10 @@ export async function createUploadServer(config) {
         const password = typeof body.password === 'string' && body.password.length <= 256 ? body.password : '';
         // Unknown IDs perform the same password derivation, avoiding a timing oracle.
         const hash = await passwordHash(password, row?.salt || 'unknown-invitation');
-        if (!row || !equal(hash.toString('hex'), row.hash)) throw fail(401, 'Incorrect upload ID or password.');
-        live(row);
-        send(200, { token: sign({ role: 'client', id: row.id, exp: Date.now() + 7 * 86400000 }), upload: view(row) }); return;
+        const current = row && get(row.id);
+        if (!current || current.salt !== row.salt || !equal(hash.toString('hex'), current.hash)) throw fail(401, 'Incorrect upload ID or password.');
+        live(current);
+        send(200, { token: sign({ role: 'client', id: current.id, v: current.auth_version, exp: Date.now() + 7 * 86400000 }), upload: view(current) }); return;
       }
       if (parts[1] === 'admin') {
         verify(bearer, 'admin');
@@ -145,10 +158,11 @@ export async function createUploadServer(config) {
         if (parts.length === 2 && req.method === 'POST') {
           const b = await json(req);
           const maxSize = b.maxSize ?? 20 * GB, days = b.days ?? 7;
-          if (!Number.isSafeInteger(maxSize) || maxSize < 1 || maxSize > 1000 * GB || !Number.isInteger(days) || days < 1 || days > 30 || typeof b.label !== 'string' || b.label.length > 120) throw fail(400, 'Use a label, 1–30 days and a file limit up to 1000 GB.');
+          if (!Number.isSafeInteger(maxSize) || maxSize < 1 || maxSize > 1000 * GB || !Number.isInteger(days) || days < 1 || days > 30 || typeof b.label !== 'string' || !b.label.trim() || b.label.length > 120) throw fail(400, 'Use a label, 1–30 days and a file limit up to 1000 GB.');
           const used = db.prepare("SELECT COALESCE(SUM(CASE WHEN state='complete' THEN size ELSE max_size END),0) AS n FROM invites WHERE state='complete' OR expires>?").get(Date.now()).n;
           if (used + maxSize > quota) throw fail(507, 'Upload storage quota is reserved. Delete older invitations or files.');
-          const id = randomUUID(), password = randomBytes(18).toString('base64url'), salt = randomBytes(16).toString('hex');
+          const id = randomUUID(), password = b.password === undefined || b.password === '' ? randomBytes(18).toString('base64url') : b.password, salt = randomBytes(16).toString('hex');
+          validatePassword(password);
           const hash = (await passwordHash(password, salt)).toString('hex');
           // Password hashing yields; recheck quota before the synchronous insert.
           const reserved = db.prepare("SELECT COALESCE(SUM(CASE WHEN state='complete' THEN size ELSE max_size END),0) AS n FROM invites WHERE state='complete' OR expires>?").get(Date.now()).n;
@@ -160,6 +174,33 @@ export async function createUploadServer(config) {
         if (!/^[a-f0-9-]{36}$/.test(id || '')) throw fail(404, 'Not found.');
         const row = get(id);
         if (!row) throw fail(404, 'Not found.');
+        if (parts.length === 3 && req.method === 'GET') { send(200, view(row)); return; }
+        if (parts.length === 3 && req.method === 'PATCH') {
+          const b = await json(req);
+          if (!b || typeof b !== 'object' || Array.isArray(b) || Object.keys(b).some(key => !['label', 'maxSize', 'expires', 'password'].includes(key))) throw fail(400, 'Invalid invitation changes.');
+          await locked(id, async () => {
+            const current = get(id);
+            if (!current || current.state === 'deleting') throw fail(404, 'Upload not found.');
+            const label = b.label ?? current.label, maxSize = b.maxSize ?? current.max_size, expires = b.expires ?? current.expires;
+            if (typeof label !== 'string' || !label.trim() || label.length > 120 || !Number.isSafeInteger(maxSize) || maxSize < 1 || maxSize > 1000 * GB) throw fail(400, 'Use a label and a file limit up to 1000 GB.');
+            if (b.expires !== undefined && (!Number.isSafeInteger(expires) || expires <= Date.now() || expires > Date.now() + 30 * 86400000)) throw fail(400, 'Choose an expiry within the next 30 days.');
+            if (current.size && maxSize < current.size) throw fail(409, 'The limit cannot be smaller than the ZIP already selected by your client.');
+            if (current.state === 'uploading' && current.expires <= Date.now() && expires > Date.now()) throw fail(409, 'This upload expired after it started. Create a new invitation.');
+            const changePassword = b.password !== undefined && b.password !== '';
+            let salt = current.salt, hash = current.hash;
+            if (changePassword) {
+              validatePassword(b.password);
+              salt = randomBytes(16).toString('hex'); hash = (await passwordHash(b.password, salt)).toString('hex');
+            }
+            const now = Date.now();
+            const before = current.state === 'complete' ? current.size : current.expires > now ? current.max_size : 0;
+            const after = current.state === 'complete' ? current.size : expires > now ? maxSize : 0;
+            const others = db.prepare("SELECT COALESCE(SUM(CASE WHEN state='complete' THEN size ELSE max_size END),0) AS n FROM invites WHERE id != ? AND (state='complete' OR expires>?)").get(id, now).n;
+            if (after > before && others + after > quota) throw fail(507, 'Upload storage quota is reserved. Reduce the limit or delete older invitations.');
+            db.prepare('UPDATE invites SET label=?,max_size=?,expires=?,salt=?,hash=?,auth_version=auth_version+? WHERE id=?').run(label.trim(), maxSize, expires, salt, hash, changePassword ? 1 : 0, id);
+            send(200, view(get(id)));
+          }); return;
+        }
         if (parts.length === 3 && req.method === 'DELETE') {
           await locked(id, async () => {
             db.prepare("UPDATE invites SET state='deleting' WHERE id=?").run(id);
@@ -193,8 +234,9 @@ export async function createUploadServer(config) {
         return;
       }
       if (parts[1] === 'client' && parts.length >= 3 && parts.length <= 4) {
-        const id = parts[2]; verify(bearer, 'client', id);
+        const id = parts[2], session = verify(bearer, 'client', id);
         const row = get(id); live(row);
+        if ((session.v ?? 0) !== row.auth_version) throw fail(401, 'The password changed. Please sign in again.');
         if (parts.length === 3 && req.method === 'GET') { send(200, view(row)); return; }
         await locked(id, async () => {
           const current = get(id); live(current);

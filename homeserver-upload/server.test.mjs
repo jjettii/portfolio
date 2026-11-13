@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, readFile, appendFile, rename, stat } from 'node:fs/promises';
 import { DatabaseSync } from 'node:sqlite';
+import { createHmac, scryptSync } from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
 import { createUploadServer } from './server.mjs';
@@ -9,6 +10,7 @@ import { createUploadServer } from './server.mjs';
 async function fixture(t, options = {}) {
   const root = await mkdtemp(path.join(os.tmpdir(), 'client-upload-'));
   const config = { root, adminSecret: 'test-admin-password-long-enough', signingKey: 'test-signing-key-long-enough-for-hmac', ...options };
+  if (options.setup) await options.setup(root);
   let server = await createUploadServer(config);
   const listen = () => new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   await listen();
@@ -172,4 +174,95 @@ test('simultaneous chunks cannot overwrite each other and deletion cannot resurr
   assert.equal((await f.request(`/client/${row.id}/complete`, 'POST', undefined, token)).status, 404);
   await f.restart();
   await assert.rejects(stat(path.join(f.root, `${row.id}.file`)), { code: 'ENOENT' });
+});
+
+test('custom client passwords work, stay hashed, and blank passwords still generate a password', async t => {
+  const f = await fixture(t), row = await f.invite({ password: 'client project password' });
+  assert.equal(row.password, 'client project password');
+  assert.ok(await f.unlock(row));
+  const details = await f.request(`/admin/${row.id}`, 'GET', undefined, f.admin);
+  assert.equal(details.status, 200); assert.equal(details.data.password, undefined); assert.equal(details.data.hash, undefined);
+  const db = new DatabaseSync(path.join(f.root, 'uploads.sqlite'));
+  const stored = db.prepare('SELECT hash FROM invites WHERE id=?').get(row.id); db.close();
+  assert.notEqual(stored.hash, row.password); assert.match(stored.hash, /^[a-f0-9]{64}$/);
+  for (const password of ['   ', null, 12, 'a'.repeat(257), 'line\nbreak']) {
+    assert.equal((await f.request('/admin', 'POST', { label: 'invalid', maxSize: 1, password }, f.admin)).status, 400);
+  }
+  assert.equal((await f.invite({ password: '' })).password.length, 24);
+});
+
+test('editing keeps the link and file progress; changing password revokes old sessions durably', async t => {
+  const f = await fixture(t), row = await f.invite({ password: 'original' }), token = await f.unlock(row);
+  await f.start(row, token);
+  await f.request(`/client/${row.id}/chunk`, 'PUT', Buffer.from('PKabcdef'), token, { 'Upload-Offset': '0' });
+  assert.equal((await f.request(`/admin/${row.id}`, 'PATCH', { label: 'Rename' }, token)).status, 401);
+  assert.equal((await f.request(`/admin/${row.id}`, 'PATCH', { label: 'Rename' })).status, 401);
+  const expires = Date.now() + 14 * 86400000;
+  const updated = await f.request(`/admin/${row.id}`, 'PATCH', { label: 'New project', password: 'new client password', maxSize: 200, expires }, f.admin);
+  assert.equal(updated.status, 200); assert.equal(updated.data.id, row.id); assert.equal(updated.data.offset, 8);
+  assert.equal(updated.data.label, 'New project'); assert.equal(updated.data.maxSize, 200); assert.equal(updated.data.expires, expires);
+  assert.equal((await f.request(`/client/${row.id}`, 'GET', undefined, token)).status, 401);
+  assert.equal((await f.request('/unlock', 'POST', { id: row.id, password: row.password })).status, 401);
+  const nextToken = await f.unlock({ ...row, password: 'new client password' });
+  await f.restart();
+  assert.equal((await f.request(`/client/${row.id}`, 'GET', undefined, nextToken)).data.offset, 8);
+  assert.equal((await f.request(`/client/${row.id}/complete`, 'POST', undefined, nextToken)).status, 200);
+  assert.deepEqual(await readFile(path.join(f.root, `${row.id}.file`)), Buffer.from('PKabcdef'));
+});
+
+test('edits validate quota and selected ZIP size without partial updates or reopening completion', async t => {
+  const f = await fixture(t, { quota: 300 }), row = await f.invite({ password: 'original' }), token = await f.unlock(row);
+  await f.invite();
+  const failed = await f.request(`/admin/${row.id}`, 'PATCH', { label: 'Should not save', maxSize: 250, password: 'should not save' }, f.admin);
+  assert.equal(failed.status, 507);
+  assert.equal((await f.request(`/admin/${row.id}`, 'GET', undefined, f.admin)).data.label, row.label);
+  assert.ok(await f.unlock(row));
+  assert.equal((await f.request(`/client/${row.id}`, 'GET', undefined, token)).status, 200);
+  await f.start(row, token);
+  assert.equal((await f.request(`/admin/${row.id}`, 'PATCH', { maxSize: 7 }, f.admin)).status, 409);
+  for (const body of [{ state: 'waiting' }, { id: 'replacement' }, { label: '' }, { expires: Date.now() - 1000 }, { maxSize: 1000000000001 }, { password: ' ' }]) {
+    assert.equal((await f.request(`/admin/${row.id}`, 'PATCH', body, f.admin)).status, 400);
+  }
+  await f.request(`/client/${row.id}/chunk`, 'PUT', Buffer.from('PKabcdef'), token, { 'Upload-Offset': '0' });
+  await f.request(`/client/${row.id}/complete`, 'POST', undefined, token);
+  assert.equal((await f.request(`/admin/${row.id}`, 'PATCH', { label: 'Delivered', password: 'changed' }, f.admin)).data.state, 'complete');
+  const updatedToken = await f.unlock({ ...row, password: 'changed' });
+  assert.equal((await f.start(row, updatedToken)).status, 409);
+  assert.equal((await f.request(`/admin/${row.id}/download`, 'POST', undefined, f.admin)).status, 200);
+});
+
+test('blank edit passwords preserve sessions and expired waiting invitations can be renewed', async t => {
+  const f = await fixture(t), row = await f.invite(), token = await f.unlock(row);
+  assert.equal((await f.request(`/admin/${row.id}`, 'PATCH', { label: 'New name', password: '' }, f.admin)).status, 200);
+  assert.equal((await f.request(`/client/${row.id}`, 'GET', undefined, token)).status, 200);
+  const db = new DatabaseSync(path.join(f.root, 'uploads.sqlite'));
+  db.prepare('UPDATE invites SET expires=? WHERE id=?').run(Date.now() - 1000, row.id); db.close();
+  assert.equal((await f.request(`/admin/${row.id}`, 'PATCH', { expires: Date.now() + 86400000 }, f.admin)).status, 200);
+  assert.equal((await f.request(`/client/${row.id}`, 'GET', undefined, token)).status, 200);
+  await f.start(row, token);
+  const db2 = new DatabaseSync(path.join(f.root, 'uploads.sqlite'));
+  db2.prepare('UPDATE invites SET expires=? WHERE id=?').run(Date.now() - 1000, row.id); db2.close();
+  await f.restart();
+  assert.equal((await f.request(`/admin/${row.id}`, 'PATCH', { expires: Date.now() + 86400000 }, f.admin)).status, 409);
+});
+
+test('existing SQLite installations migrate additively and legacy sessions revoke after a password change', async t => {
+  const id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  const f = await fixture(t, { setup: async root => {
+    const db = new DatabaseSync(path.join(root, 'uploads.sqlite'));
+    db.exec(`CREATE TABLE invites (id TEXT PRIMARY KEY, label TEXT NOT NULL, salt TEXT NOT NULL, hash TEXT NOT NULL,
+      created INTEGER NOT NULL, expires INTEGER NOT NULL, max_size INTEGER NOT NULL,
+      state TEXT NOT NULL DEFAULT 'waiting', filename TEXT, size INTEGER, offset INTEGER NOT NULL DEFAULT 0,
+      fingerprint TEXT, completed INTEGER);`);
+    db.prepare('INSERT INTO invites(id,label,salt,hash,created,expires,max_size) VALUES(?,?,?,?,?,?,?)').run(id, 'Existing', 'salt', scryptSync('original', 'salt', 32).toString('hex'), Date.now(), Date.now() + 86400000, 100);
+    db.close();
+  } });
+  const payload = Buffer.from(JSON.stringify({ role: 'client', id, exp: Date.now() + 86400000 })).toString('base64url');
+  const token = `${payload}.${createHmac('sha256', 'test-signing-key-long-enough-for-hmac').update(payload).digest('base64url')}`;
+  assert.equal((await f.request(`/client/${id}`, 'GET', undefined, token)).status, 200);
+  assert.equal((await f.request(`/admin/${id}`, 'PATCH', { password: 'replacement' }, f.admin)).status, 200);
+  assert.equal((await f.request(`/client/${id}`, 'GET', undefined, token)).status, 401);
+  await f.restart();
+  assert.equal((await f.request(`/client/${id}`, 'GET', undefined, token)).status, 401);
+  assert.ok(await f.unlock({ id, password: 'replacement' }));
 });

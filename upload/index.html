@@ -9,7 +9,7 @@
   <link rel="icon" type="image/png" href="/assets/favicon/favicon-96x96.png" sizes="96x96">
   <link rel="stylesheet" href="/assets/css/style.css">
   <link rel="stylesheet" href="/upload/upload.css?v=20261113-2">
-  <script src="/upload/upload.js?v=20261113-3" defer></script>
+  <script src="/upload/upload.js?v=20261113-4" defer></script>
 </head>
 <body>
   <main class="upload-wrap">
@@ -62,11 +62,28 @@
         <form id="createForm" class="card">
           <h2>New upload invitation</h2>
           <label for="label">Client / project</label><input id="label" maxlength="120" required>
+          <label for="invitePassword">Upload password</label><input id="invitePassword" type="text" maxlength="256" autocomplete="off" placeholder="Password you'll share with the client">
+          <p class="small">Choose your own password, or leave blank to generate one.</p>
           <div class="columns"><div><label for="days">Expires in (days)</label><input id="days" type="number" min="1" max="30" value="7" required></div>
           <div><label for="limit">Maximum ZIP size (GB)</label><input id="limit" type="number" min="1" max="1000" value="20" required></div></div>
           <button>Create link + password</button>
         </form>
         <div id="newInvite" class="card" hidden><h2>Share with your client</h2><p class="small">Copy these details now. The password is shown only once.</p><textarea id="shareDetails" rows="5" readonly aria-label="Invitation details"></textarea><button id="copyInvite" class="secondary">Copy invitation</button><p id="copyStatus" role="status"></p></div>
+        <form id="editForm" class="card" hidden>
+          <h2>Edit upload invitation</h2>
+          <p id="editState" class="meta"></p>
+          <label for="editLink">Share link</label><input id="editLink" readonly>
+          <button id="copyEditLink" type="button" class="secondary">Copy link</button>
+          <label for="editLabel">Client / project</label><input id="editLabel" maxlength="120" required>
+          <label for="editPassword">Change password</label><input id="editPassword" type="text" maxlength="256" autocomplete="off" placeholder="Leave blank to keep the current password">
+          <p class="small">The current password cannot be displayed. Changing it signs clients out; they can sign in again to resume their ZIP.</p>
+          <label for="editExpires">Expiry (your local time)</label><input id="editExpires" type="datetime-local" required>
+          <label for="editLimit">Maximum ZIP size (GB)</label><input id="editLimit" type="number" min="0.000000001" max="1000" step="any" required>
+          <p class="small">Editing keeps the same link. Completed invitations stay closed to further uploads.</p>
+          <button type="submit">Save changes</button>
+          <button id="cancelEdit" type="button" class="secondary">Cancel</button>
+          <p id="editStatus" class="small" role="status"></p>
+        </form>
         <h2>Existing invitations</h2>
         <div id="inbox"></div>
       </div>
