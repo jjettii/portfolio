@@ -178,7 +178,7 @@
   bind('copyEditLink', async () => { await navigator.clipboard.writeText($('editLink').value); $('editStatus').textContent = 'Link copied.'; });
   $('cancelEdit').addEventListener('click', closeEditor);
   function showShareDetails(row, password) {
-    $('shareDetails').value = `Upload: ${shareLink(row.id)}\nUpload ID: ${row.id}\n${password === undefined ? 'Password: unchanged (use the password previously shared)' : `Password: ${password}`}\nExpires: ${new Date(row.expires).toLocaleString()}\nPlease send all files in ONE ZIP (maximum ${size(row.maxSize)}).`;
+    $('shareDetails').value = `Upload: ${shareLink(row.id)}\n${password === undefined ? 'Password: unchanged (use the password previously shared)' : `Password: ${password}`}\nExpires: ${new Date(row.expires).toLocaleString()}\nPlease send all files in a single .ZIP file (maximum ${size(row.maxSize)}).`;
     show('newInvite'); $('copyStatus').textContent = '';
   }
   bind('editForm', async () => {
