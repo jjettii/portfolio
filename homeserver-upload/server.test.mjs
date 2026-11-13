@@ -120,6 +120,19 @@ test('quota reservations prevent uncontrolled disk allocations and deletion rele
   assert.ok((await f.invite()).id);
 });
 
+test('1000 decimal GB can be reserved and started; one byte over the maximum is rejected', async t => {
+  const maxSize = 1000 * 1000 ** 3;
+  const f = await fixture(t, { quota: maxSize });
+  assert.equal((await f.request('/admin', 'POST', { label: 'Too large', maxSize: maxSize + 1, days: 7 }, f.admin)).status, 400);
+  const row = await f.invite({ maxSize });
+  assert.equal(row.maxSize, 1000000000000);
+  const token = await f.unlock(row);
+  const started = await f.start(row, token, { size: maxSize });
+  assert.equal(started.status, 200);
+  assert.equal(started.data.size, maxSize);
+  assert.equal(started.data.offset, 0);
+});
+
 test('password attempts are rate limited', async t => {
   const f = await fixture(t);
   for (let i = 0; i < 29; i++) await f.request('/login', 'POST', { password: 'bad' });

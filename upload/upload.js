@@ -5,7 +5,7 @@
   const show = (id, yes = true) => { $(id).hidden = !yes; };
   const error = e => { $('error').textContent = e.message; show('error'); };
   const clearError = () => show('error', false);
-  const size = bytes => `${(bytes / 1024 ** 3).toLocaleString(undefined, { maximumFractionDigits: 2 })} GiB`;
+  const size = bytes => `${(bytes / 1000 ** 3).toLocaleString(undefined, { maximumFractionDigits: 2 })} GB`;
   let adminToken = '', clientToken = '', upload, running = false, paused = false, xhr, wakeLock;
   async function api(route, { token, method = 'GET', body } = {}) {
     const r = await fetch(`${API}/incoming${route}`, { method, headers: {
@@ -144,7 +144,7 @@
   }
   bind('refresh', refresh);
   bind('createForm', async () => {
-    const row = await api('/admin', { token: adminToken, method: 'POST', body: { label: $('label').value.trim(), days: Number($('days').value), maxSize: Number($('limit').value) * 1024 ** 3 } });
+    const row = await api('/admin', { token: adminToken, method: 'POST', body: { label: $('label').value.trim(), days: Number($('days').value), maxSize: Number($('limit').value) * 1000 ** 3 } });
     $('shareDetails').value = `Upload: https://www.jordanettinger.com/upload/?id=${row.id}\nUpload ID: ${row.id}\nPassword: ${row.password}\nExpires: ${new Date(row.expires).toLocaleString()}\nPlease send all files in ONE ZIP (maximum ${size(row.maxSize)}).`;
     show('newInvite'); $('copyStatus').textContent = ''; await refresh();
   });

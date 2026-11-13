@@ -9,7 +9,7 @@
   <link rel="icon" type="image/png" href="/assets/favicon/favicon-96x96.png" sizes="96x96">
   <link rel="stylesheet" href="/assets/css/style.css">
   <link rel="stylesheet" href="/upload/upload.css?v=20261113-2">
-  <script src="/upload/upload.js" defer></script>
+  <script src="/upload/upload.js?v=20261113-3" defer></script>
 </head>
 <body>
   <main class="upload-wrap">
@@ -63,7 +63,7 @@
           <h2>New upload invitation</h2>
           <label for="label">Client / project</label><input id="label" maxlength="120" required>
           <div class="columns"><div><label for="days">Expires in (days)</label><input id="days" type="number" min="1" max="30" value="7" required></div>
-          <div><label for="limit">Maximum ZIP size (GiB)</label><input id="limit" type="number" min="1" max="100" value="20" required></div></div>
+          <div><label for="limit">Maximum ZIP size (GB)</label><input id="limit" type="number" min="1" max="1000" value="20" required></div></div>
           <button>Create link + password</button>
         </form>
         <div id="newInvite" class="card" hidden><h2>Share with your client</h2><p class="small">Copy these details now. The password is shown only once.</p><textarea id="shareDetails" rows="5" readonly aria-label="Invitation details"></textarea><button id="copyInvite" class="secondary">Copy invitation</button><p id="copyStatus" role="status"></p></div>

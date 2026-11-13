@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 const derive = promisify(scrypt);
 const CHUNK = 8 * 1024 * 1024;
 const GiB = 1024 ** 3;
+const GB = 1000 ** 3;
 const fail = (status, message) => Object.assign(new Error(message), { status });
 const equal = (a, b) => Buffer.byteLength(a) === Buffer.byteLength(b) && timingSafeEqual(Buffer.from(a), Buffer.from(b));
 
@@ -143,8 +144,8 @@ export async function createUploadServer(config) {
         if (parts.length === 2 && req.method === 'GET') { send(200, db.prepare('SELECT * FROM invites ORDER BY created DESC').all().map(view)); return; }
         if (parts.length === 2 && req.method === 'POST') {
           const b = await json(req);
-          const maxSize = b.maxSize ?? 20 * GiB, days = b.days ?? 7;
-          if (!Number.isSafeInteger(maxSize) || maxSize < 1 || maxSize > 100 * GiB || !Number.isInteger(days) || days < 1 || days > 30 || typeof b.label !== 'string' || b.label.length > 120) throw fail(400, 'Use a label, 1–30 days and a file limit up to 100 GiB.');
+          const maxSize = b.maxSize ?? 20 * GB, days = b.days ?? 7;
+          if (!Number.isSafeInteger(maxSize) || maxSize < 1 || maxSize > 1000 * GB || !Number.isInteger(days) || days < 1 || days > 30 || typeof b.label !== 'string' || b.label.length > 120) throw fail(400, 'Use a label, 1–30 days and a file limit up to 1000 GB.');
           const used = db.prepare("SELECT COALESCE(SUM(CASE WHEN state='complete' THEN size ELSE max_size END),0) AS n FROM invites WHERE state='complete' OR expires>?").get(Date.now()).n;
           if (used + maxSize > quota) throw fail(507, 'Upload storage quota is reserved. Delete older invitations or files.');
           const id = randomUUID(), password = randomBytes(18).toString('base64url'), salt = randomBytes(16).toString('hex');
