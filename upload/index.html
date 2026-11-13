@@ -5,23 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
-  <title>Upload Files — Jordan Ettinger</title>
-  <link rel="icon" href="/assets/favicon/favicon.svg" type="image/svg+xml">
+  <title>File Upload — Jordan Ettinger</title>
+  <link rel="icon" type="image/png" href="/assets/favicon/favicon-96x96.png" sizes="96x96">
   <link rel="stylesheet" href="/assets/css/style.css">
-  <link rel="stylesheet" href="/upload/upload.css">
+  <link rel="stylesheet" href="/upload/upload.css?v=20261113-2">
   <script src="/upload/upload.js" defer></script>
 </head>
 <body>
   <main class="upload-wrap">
-    <a class="wordmark" href="/">Jordan Ettinger</a>
+    <a class="upload-logo" href="/"><img src="/assets/img/logo.webp" alt="Jordan Ettinger"></a>
     <section id="clientView">
-      <h1>Upload files</h1>
-      <p class="sub">Send your files directly to Jordan.</p>
+      <h1>File Upload</h1>
+      <p class="sub">Enter your upload ID and password to deliver your files.</p>
       <form id="unlockForm">
-        <label for="uploadId">Upload ID</label>
-        <input id="uploadId" autocomplete="off" spellcheck="false" required>
-        <label for="uploadPassword">Password</label>
-        <input id="uploadPassword" type="password" autocomplete="current-password" required>
+        <div class="upload-field">
+          <label for="uploadId">Upload ID</label>
+          <input id="uploadId" placeholder="e.g. 3f2a7b1c-..." autocomplete="off" spellcheck="false" required>
+        </div>
+        <div class="upload-field">
+          <label for="uploadPassword">Password</label>
+          <input id="uploadPassword" type="password" placeholder="Password" autocomplete="current-password" required>
+        </div>
         <button>Access upload</button>
       </form>
       <div id="uploadPanel" hidden>
@@ -40,14 +44,17 @@
         </div>
         <p id="uploadSuccess" class="notice" role="status" hidden>Your ZIP has arrived. Thank you! This upload is complete and this invitation cannot accept any more files.</p>
       </div>
-      <a class="admin-link" href="/upload/?admin=1">Admin access</a>
+      <hr class="upload-divider">
+      <div class="admin-toggle"><a class="admin-link" href="/upload/?admin=1">Admin</a></div>
     </section>
     <section id="adminView" hidden>
       <h1>Upload inbox</h1>
       <p class="sub">Create invitations and manage incoming files.</p>
       <form id="adminLogin">
-        <label for="adminPassword">Admin password</label>
-        <input id="adminPassword" type="password" autocomplete="current-password" required>
+        <div class="upload-field">
+          <label for="adminPassword">Admin password</label>
+          <input id="adminPassword" type="password" placeholder="Admin password" autocomplete="current-password" required>
+        </div>
         <button>Sign in</button>
       </form>
       <div id="dashboard" hidden>
@@ -63,7 +70,8 @@
         <h2>Existing invitations</h2>
         <div id="inbox"></div>
       </div>
-      <a class="admin-link" href="/upload/">Back to upload</a>
+      <hr class="upload-divider">
+      <div class="admin-toggle"><a class="admin-link" href="/upload/">Back to upload</a></div>
     </section>
     <p id="error" role="alert" hidden></p>
   </main>
