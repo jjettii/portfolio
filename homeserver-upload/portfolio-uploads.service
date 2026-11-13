@@ -1,0 +1,24 @@
+[Unit]
+Description=Portfolio client upload inbox
+After=network.target
+RequiresMountsFor=/mnt/storage1
+
+[Service]
+Type=simple
+User=portfolio-uploads
+Group=portfolio-uploads
+WorkingDirectory=/mnt/storage1/homeserver-uploads/app
+EnvironmentFile=/etc/portfolio-uploads.env
+ExecStart=/opt/portfolio-node24/bin/node /mnt/storage1/homeserver-uploads/app/server.mjs
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/mnt/storage1/homeserver-uploads/data
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target

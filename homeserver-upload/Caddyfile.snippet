@@ -1,0 +1,12 @@
+# Merge this handler INSIDE the existing files.jordanettinger.com site block.
+# Preserve the existing transfer reverse_proxy and all other site blocks.
+# Caddy prioritizes the more specific /incoming/* path over a catch-all proxy.
+handle /incoming/* {
+    reverse_proxy 127.0.0.1:8789
+}
+
+# If the existing catch-all uses `handle { ... }`, retain it alongside this one.
+# If it uses handle_path /incoming/*, replace that with handle: do not strip the prefix.
+# Do not enable request buffering or short whole-request timeouts.
+# Keep this hostname DNS-only so file bytes bypass Cloudflare's proxy.
+# Suppress/redact query strings in any access logs: download URLs contain capabilities.

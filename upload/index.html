@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>Upload Files — Jordan Ettinger</title>
+  <link rel="icon" href="/assets/favicon/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <link rel="stylesheet" href="/upload/upload.css">
+  <script src="/upload/upload.js" defer></script>
+</head>
+<body>
+  <main class="upload-wrap">
+    <a class="wordmark" href="/">Jordan Ettinger</a>
+    <section id="clientView">
+      <h1>Upload files</h1>
+      <p class="sub">Send your files directly to Jordan.</p>
+      <form id="unlockForm">
+        <label for="uploadId">Upload ID</label>
+        <input id="uploadId" autocomplete="off" spellcheck="false" required>
+        <label for="uploadPassword">Password</label>
+        <input id="uploadPassword" type="password" autocomplete="current-password" required>
+        <button>Access upload</button>
+      </form>
+      <div id="uploadPanel" hidden>
+        <h2 id="clientLabel"></h2>
+        <div id="uploadControls">
+          <p class="notice"><strong>Put all your files into a single ZIP before uploading.</strong> This invitation accepts one ZIP file and closes after a successful upload.</p>
+          <p id="uploadLimit" class="sub"></p>
+          <label for="zipFile">Choose one ZIP file</label>
+          <input id="zipFile" type="file" accept=".zip,application/zip">
+          <p id="resumeHint" class="sub"></p>
+          <button id="sendFile" type="button">Upload ZIP</button>
+          <button id="pauseFile" type="button" class="secondary" hidden>Pause upload</button>
+          <progress id="uploadProgress" max="100" value="0" aria-label="Upload progress"></progress>
+          <p id="progressText" class="sub" role="status" aria-live="polite"></p>
+          <p class="small">Keep this page open and your device awake. If your connection drops, we’ll retry automatically. After reopening this page, sign in and select the same ZIP to resume.</p>
+        </div>
+        <p id="uploadSuccess" class="notice" role="status" hidden>Your ZIP has arrived. Thank you! This upload is complete and this invitation cannot accept any more files.</p>
+      </div>
+      <a class="admin-link" href="/upload/?admin=1">Admin access</a>
+    </section>
+    <section id="adminView" hidden>
+      <h1>Upload inbox</h1>
+      <p class="sub">Create invitations and manage incoming files.</p>
+      <form id="adminLogin">
+        <label for="adminPassword">Admin password</label>
+        <input id="adminPassword" type="password" autocomplete="current-password" required>
+        <button>Sign in</button>
+      </form>
+      <div id="dashboard" hidden>
+        <div class="actions"><button id="refresh" class="secondary">Refresh inbox</button><button id="logout" class="secondary">Sign out</button></div>
+        <form id="createForm" class="card">
+          <h2>New upload invitation</h2>
+          <label for="label">Client / project</label><input id="label" maxlength="120" required>
+          <div class="columns"><div><label for="days">Expires in (days)</label><input id="days" type="number" min="1" max="30" value="7" required></div>
+          <div><label for="limit">Maximum ZIP size (GiB)</label><input id="limit" type="number" min="1" max="100" value="20" required></div></div>
+          <button>Create link + password</button>
+        </form>
+        <div id="newInvite" class="card" hidden><h2>Share with your client</h2><p class="small">Copy these details now. The password is shown only once.</p><textarea id="shareDetails" rows="5" readonly aria-label="Invitation details"></textarea><button id="copyInvite" class="secondary">Copy invitation</button><p id="copyStatus" role="status"></p></div>
+        <h2>Existing invitations</h2>
+        <div id="inbox"></div>
+      </div>
+      <a class="admin-link" href="/upload/">Back to upload</a>
+    </section>
+    <p id="error" role="alert" hidden></p>
+  </main>
+</body>
+</html>
