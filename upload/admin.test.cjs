@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 
-function page(rows = []) {
+function page(rows = [], pageOptions = {}) {
   const elements = new Map(), calls = [];
   class Element {
     constructor(tag = 'div') { this.tagName = tag.toUpperCase(); this.value = ''; this.hidden = false; this.children = []; this.listeners = {}; this.textContent = ''; }
@@ -30,6 +30,10 @@ function page(rows = []) {
       calls.push({ route, method: options.method, body });
       let data;
       if (route === '/login') data = { token: 'admin-session' };
+      else if (route === '/admin/capabilities') {
+        if (pageOptions.oldBackend) return { ok: false, status: 404, json: async () => ({ error: 'Not found.' }) };
+        data = { apiVersion: 2, maxSize: 500000000000 };
+      }
       else if (route === '/admin' && options.method === 'GET') data = rows;
       else if (route === '/admin' && options.method === 'POST') data = { id: 'created', ...body, expires: Date.now() + 86400000, password: body.password || 'generated' };
       else if (options.method === 'GET') data = rows.find(row => route === `/admin/${row.id}`);
@@ -45,10 +49,10 @@ function page(rows = []) {
 
 test('admin creates an invitation with the chosen password and shares returned credentials', async () => {
   const p = page(); await p.login();
-  p.$('label').value = 'Client project'; p.$('invitePassword').value = 'chosen password'; p.$('limit').value = '1000';
+  p.$('label').value = 'Client project'; p.$('invitePassword').value = 'chosen password'; p.$('limit').value = '500';
   await p.$('createForm').fire('submit');
   const create = p.calls.find(call => call.method === 'POST' && call.route === '/admin');
-  assert.equal(create.body.password, 'chosen password'); assert.equal(create.body.maxSize, 1000000000000);
+  assert.equal(create.body.password, 'chosen password'); assert.equal(create.body.maxSize, 500000000000);
   assert.match(p.$('shareDetails').value, /Password: chosen password/); assert.equal(p.$('invitePassword').value, '');
 });
 
@@ -57,11 +61,11 @@ test('admin edits existing details, keeps unchanged expiry, and submits with the
   const p = page([row]); await p.login();
   await p.$('inbox').children[0].children.find(child => child.textContent === 'Edit invitation').fire('click');
   assert.equal(p.$('editForm').hidden, false); assert.match(p.$('editLink').value, /id=existing$/);
-  p.$('editLabel').value = 'Renamed'; p.$('editPassword').value = 'replacement'; p.$('editLimit').value = '1000';
+  p.$('editLabel').value = 'Renamed'; p.$('editPassword').value = 'replacement'; p.$('editLimit').value = '500';
   await p.$('editForm').fire('submit');
   const edit = p.calls.find(call => call.method === 'PATCH');
   assert.equal(edit.route, '/admin/existing'); assert.equal(edit.body.label, 'Renamed');
-  assert.equal(edit.body.password, 'replacement'); assert.equal(edit.body.maxSize, 1000000000000);
+  assert.equal(edit.body.password, 'replacement'); assert.equal(edit.body.maxSize, 500000000000);
   assert.equal(edit.body.expires, undefined); assert.equal(p.$('editForm').hidden, true);
   assert.match(p.$('shareDetails').value, /Password: replacement/); assert.match(p.$('shareDetails').value, /id=existing/);
   assert.equal(p.$('copyEditLink').disabled, undefined);
@@ -76,4 +80,13 @@ test('blank edit password preserves the password; sign-out clears editor and sha
   p.$('invitePassword').value = 'not saved'; await p.$('logout').fire('click');
   assert.equal(p.$('invitePassword').value, ''); assert.equal(p.$('shareDetails').value, '');
   assert.equal(p.$('editPassword').value, ''); assert.equal(p.$('dashboard').hidden, true);
+});
+
+test('old backends show an upgrade message before custom passwords or editing can be used', async () => {
+  const p = page([], { oldBackend: true }); await p.login();
+  assert.match(p.$('error').textContent, /older upload service/);
+  assert.match(p.$('error').textContent, /500 GB/);
+  assert.equal(p.$('dashboard').hidden, true);
+  assert.equal(p.$('adminLogin').hidden, false);
+  assert.equal(p.calls.some(call => call.route === '/admin'), false);
 });

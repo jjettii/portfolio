@@ -154,11 +154,14 @@ export async function createUploadServer(config) {
       }
       if (parts[1] === 'admin') {
         verify(bearer, 'admin');
+        if (parts.length === 3 && parts[2] === 'capabilities' && req.method === 'GET') {
+          send(200, { apiVersion: 2, maxSize: 500 * GB }); return;
+        }
         if (parts.length === 2 && req.method === 'GET') { send(200, db.prepare('SELECT * FROM invites ORDER BY created DESC').all().map(view)); return; }
         if (parts.length === 2 && req.method === 'POST') {
           const b = await json(req);
           const maxSize = b.maxSize ?? 20 * GB, days = b.days ?? 7;
-          if (!Number.isSafeInteger(maxSize) || maxSize < 1 || maxSize > 1000 * GB || !Number.isInteger(days) || days < 1 || days > 30 || typeof b.label !== 'string' || !b.label.trim() || b.label.length > 120) throw fail(400, 'Use a label, 1–30 days and a file limit up to 1000 GB.');
+          if (!Number.isSafeInteger(maxSize) || maxSize < 1 || maxSize > 500 * GB || !Number.isInteger(days) || days < 1 || days > 30 || typeof b.label !== 'string' || !b.label.trim() || b.label.length > 120) throw fail(400, 'Use a label, 1–30 days and a file limit up to 500 GB.');
           const used = db.prepare("SELECT COALESCE(SUM(CASE WHEN state='complete' THEN size ELSE max_size END),0) AS n FROM invites WHERE state='complete' OR expires>?").get(Date.now()).n;
           if (used + maxSize > quota) throw fail(507, 'Upload storage quota is reserved. Delete older invitations or files.');
           const id = randomUUID(), password = b.password === undefined || b.password === '' ? randomBytes(18).toString('base64url') : b.password, salt = randomBytes(16).toString('hex');
@@ -182,7 +185,7 @@ export async function createUploadServer(config) {
             const current = get(id);
             if (!current || current.state === 'deleting') throw fail(404, 'Upload not found.');
             const label = b.label ?? current.label, maxSize = b.maxSize ?? current.max_size, expires = b.expires ?? current.expires;
-            if (typeof label !== 'string' || !label.trim() || label.length > 120 || !Number.isSafeInteger(maxSize) || maxSize < 1 || maxSize > 1000 * GB) throw fail(400, 'Use a label and a file limit up to 1000 GB.');
+            if (typeof label !== 'string' || !label.trim() || label.length > 120 || !Number.isSafeInteger(maxSize) || maxSize < 1 || maxSize > 500 * GB) throw fail(400, 'Use a label and a file limit up to 500 GB.');
             if (b.expires !== undefined && (!Number.isSafeInteger(expires) || expires <= Date.now() || expires > Date.now() + 30 * 86400000)) throw fail(400, 'Choose an expiry within the next 30 days.');
             if (current.size && maxSize < current.size) throw fail(409, 'The limit cannot be smaller than the ZIP already selected by your client.');
             if (current.state === 'uploading' && current.expires <= Date.now() && expires > Date.now()) throw fail(409, 'This upload expired after it started. Create a new invitation.');

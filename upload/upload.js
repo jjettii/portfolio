@@ -114,6 +114,13 @@
   window.addEventListener('beforeunload', e => { if (running) { e.preventDefault(); e.returnValue = ''; } });
   bind('adminLogin', async () => {
     const data = await api('/login', { method: 'POST', body: { password: $('adminPassword').value } });
+    try {
+      const caps = await api('/admin/capabilities', { token: data.token });
+      if (caps.apiVersion < 2 || caps.maxSize !== 500 * 1000 ** 3) throw Error('The homeserver upload service needs updating. Install the latest server.mjs, restart portfolio-uploads, then sign in again.');
+    } catch (e) {
+      if (e.status === 404) throw Error('The homeserver is running an older upload service. Install the latest server.mjs and restart portfolio-uploads to enable the 500 GB limit and editing.');
+      throw e;
+    }
     adminToken = data.token; $('adminPassword').value = ''; show('adminLogin', false); show('dashboard'); await refresh();
   });
   async function refresh() {

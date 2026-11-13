@@ -32,6 +32,8 @@ async function fixture(t, options = {}) {
 test('admin authentication, private listings, generated password and origin policy', async t => {
   const f = await fixture(t);
   assert.equal((await f.request('/admin')).status, 401);
+  assert.equal((await f.request('/admin/capabilities')).status, 401);
+  assert.deepEqual((await f.request('/admin/capabilities', 'GET', undefined, f.admin)).data, { apiVersion: 2, maxSize: 500000000000 });
   assert.equal((await f.request('/login', 'POST', { password: 'wrong' })).status, 401);
   const row = await f.invite(); assert.ok(row.password.length >= 24);
   const list = await f.request('/admin', 'GET', undefined, f.admin);
@@ -122,12 +124,12 @@ test('quota reservations prevent uncontrolled disk allocations and deletion rele
   assert.ok((await f.invite()).id);
 });
 
-test('1000 decimal GB can be reserved and started; one byte over the maximum is rejected', async t => {
-  const maxSize = 1000 * 1000 ** 3;
+test('500 decimal GB can be reserved and started; one byte over the maximum is rejected', async t => {
+  const maxSize = 500 * 1000 ** 3;
   const f = await fixture(t, { quota: maxSize });
   assert.equal((await f.request('/admin', 'POST', { label: 'Too large', maxSize: maxSize + 1, days: 7 }, f.admin)).status, 400);
   const row = await f.invite({ maxSize });
-  assert.equal(row.maxSize, 1000000000000);
+  assert.equal(row.maxSize, 500000000000);
   const token = await f.unlock(row);
   const started = await f.start(row, token, { size: maxSize });
   assert.equal(started.status, 200);
@@ -220,7 +222,7 @@ test('edits validate quota and selected ZIP size without partial updates or reop
   assert.equal((await f.request(`/client/${row.id}`, 'GET', undefined, token)).status, 200);
   await f.start(row, token);
   assert.equal((await f.request(`/admin/${row.id}`, 'PATCH', { maxSize: 7 }, f.admin)).status, 409);
-  for (const body of [{ state: 'waiting' }, { id: 'replacement' }, { label: '' }, { expires: Date.now() - 1000 }, { maxSize: 1000000000001 }, { password: ' ' }]) {
+  for (const body of [{ state: 'waiting' }, { id: 'replacement' }, { label: '' }, { expires: Date.now() - 1000 }, { maxSize: 500000000001 }, { password: ' ' }]) {
     assert.equal((await f.request(`/admin/${row.id}`, 'PATCH', body, f.admin)).status, 400);
   }
   await f.request(`/client/${row.id}/chunk`, 'PUT', Buffer.from('PKabcdef'), token, { 'Upload-Offset': '0' });
