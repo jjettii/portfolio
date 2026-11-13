@@ -1,6 +1,6 @@
 import http from 'node:http';
 import { DatabaseSync } from 'node:sqlite';
-import { randomBytes, randomUUID, scrypt, timingSafeEqual, createHmac } from 'node:crypto';
+import { randomBytes, randomUUID, scrypt, timingSafeEqual, createHmac, createHash, createCipheriv, createDecipheriv } from 'node:crypto';
 import { promisify } from 'node:util';
 import { mkdir, open, rename, rm, stat, statfs } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
@@ -27,11 +27,31 @@ export async function createUploadServer(config) {
       id TEXT PRIMARY KEY, label TEXT NOT NULL, salt TEXT NOT NULL, hash TEXT NOT NULL,
       created INTEGER NOT NULL, expires INTEGER NOT NULL, max_size INTEGER NOT NULL,
       state TEXT NOT NULL DEFAULT 'waiting', filename TEXT, size INTEGER, offset INTEGER NOT NULL DEFAULT 0,
-      fingerprint TEXT, completed INTEGER, auth_version INTEGER NOT NULL DEFAULT 0
+      fingerprint TEXT, completed INTEGER, auth_version INTEGER NOT NULL DEFAULT 0, password_box TEXT
     );`);
   // Additive upgrade for existing installations; preserves invitations and file offsets.
   if (!db.prepare('PRAGMA table_info(invites)').all().some(column => column.name === 'auth_version')) {
     db.exec('ALTER TABLE invites ADD COLUMN auth_version INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!db.prepare('PRAGMA table_info(invites)').all().some(column => column.name === 'password_box')) {
+    db.exec('ALTER TABLE invites ADD COLUMN password_box TEXT');
+  }
+  const passwordKey = createHash('sha256').update('portfolio-upload-password-v1\0').update(signingKey).digest();
+  function sealPassword(id, password) {
+    const nonce = randomBytes(12), cipher = createCipheriv('aes-256-gcm', passwordKey, nonce);
+    cipher.setAAD(Buffer.from(id));
+    const ciphertext = Buffer.concat([cipher.update(password, 'utf8'), cipher.final()]);
+    return ['v1', nonce.toString('base64url'), cipher.getAuthTag().toString('base64url'), ciphertext.toString('base64url')].join('.');
+  }
+  function savedPassword(row) {
+    if (!row.password_box) return;
+    try {
+      const [version, nonce, tag, ciphertext] = row.password_box.split('.');
+      if (version !== 'v1') return;
+      const cipher = createDecipheriv('aes-256-gcm', passwordKey, Buffer.from(nonce, 'base64url'));
+      cipher.setAAD(Buffer.from(row.id)); cipher.setAuthTag(Buffer.from(tag, 'base64url'));
+      return Buffer.concat([cipher.update(Buffer.from(ciphertext, 'base64url')), cipher.final()]).toString('utf8');
+    } catch { return; } // A rotated key or legacy invitation needs the current password once.
   }
   const get = id => db.prepare('SELECT * FROM invites WHERE id = ?').get(id);
   const location = (id, ext) => path.join(root, `${id}.${ext}`);
@@ -155,7 +175,7 @@ export async function createUploadServer(config) {
       if (parts[1] === 'admin') {
         verify(bearer, 'admin');
         if (parts.length === 3 && parts[2] === 'capabilities' && req.method === 'GET') {
-          send(200, { apiVersion: 2, maxSize: 500 * GB }); return;
+          send(200, { apiVersion: 3, maxSize: 500 * GB }); return;
         }
         if (parts.length === 2 && req.method === 'GET') { send(200, db.prepare('SELECT * FROM invites ORDER BY created DESC').all().map(view)); return; }
         if (parts.length === 2 && req.method === 'POST') {
@@ -170,13 +190,30 @@ export async function createUploadServer(config) {
           // Password hashing yields; recheck quota before the synchronous insert.
           const reserved = db.prepare("SELECT COALESCE(SUM(CASE WHEN state='complete' THEN size ELSE max_size END),0) AS n FROM invites WHERE state='complete' OR expires>?").get(Date.now()).n;
           if (reserved + maxSize > quota) throw fail(507, 'Upload storage quota is reserved.');
-          db.prepare('INSERT INTO invites(id,label,salt,hash,created,expires,max_size) VALUES(?,?,?,?,?,?,?)').run(id, b.label, salt, hash, Date.now(), Date.now() + days * 86400000, maxSize);
+          db.prepare('INSERT INTO invites(id,label,salt,hash,created,expires,max_size,password_box) VALUES(?,?,?,?,?,?,?,?)').run(id, b.label, salt, hash, Date.now(), Date.now() + days * 86400000, maxSize, sealPassword(id, password));
           send(201, { ...view(get(id)), password }); return;
         }
         const id = parts[2];
         if (!/^[a-f0-9-]{36}$/.test(id || '')) throw fail(404, 'Not found.');
         const row = get(id);
         if (!row) throw fail(404, 'Not found.');
+        if (parts.length === 4 && parts[3] === 'invitation' && req.method === 'POST') {
+          const b = await json(req);
+          await locked(id, async () => {
+            const current = get(id);
+            if (!current || current.state === 'deleting') throw fail(404, 'Upload not found.');
+            let password = savedPassword(current);
+            if (password === undefined) {
+              if (b.password === undefined || b.password === '') throw Object.assign(fail(409, 'Enter the current password once to copy this invitation.'), { publicCode: 'password_required' });
+              validatePassword(b.password);
+              const hash = (await passwordHash(b.password, current.salt)).toString('hex');
+              if (!equal(hash, current.hash)) throw fail(400, 'That is not the current invitation password.');
+              password = b.password;
+              db.prepare('UPDATE invites SET password_box=? WHERE id=?').run(sealPassword(id, password), id);
+            }
+            send(200, { ...view(current), password });
+          }); return;
+        }
         if (parts.length === 3 && req.method === 'GET') { send(200, view(row)); return; }
         if (parts.length === 3 && req.method === 'PATCH') {
           const b = await json(req);
@@ -200,7 +237,7 @@ export async function createUploadServer(config) {
             const after = current.state === 'complete' ? current.size : expires > now ? maxSize : 0;
             const others = db.prepare("SELECT COALESCE(SUM(CASE WHEN state='complete' THEN size ELSE max_size END),0) AS n FROM invites WHERE id != ? AND (state='complete' OR expires>?)").get(id, now).n;
             if (after > before && others + after > quota) throw fail(507, 'Upload storage quota is reserved. Reduce the limit or delete older invitations.');
-            db.prepare('UPDATE invites SET label=?,max_size=?,expires=?,salt=?,hash=?,auth_version=auth_version+? WHERE id=?').run(label.trim(), maxSize, expires, salt, hash, changePassword ? 1 : 0, id);
+            db.prepare('UPDATE invites SET label=?,max_size=?,expires=?,salt=?,hash=?,auth_version=auth_version+?,password_box=? WHERE id=?').run(label.trim(), maxSize, expires, salt, hash, changePassword ? 1 : 0, changePassword ? sealPassword(id, b.password) : current.password_box, id);
             send(200, view(get(id)));
           }); return;
         }
@@ -285,7 +322,7 @@ export async function createUploadServer(config) {
       if (res.headersSent || res.destroyed) { res.destroy(); return; }
       if (e.status === 429) res.setHeader('Retry-After', '900');
       if (!e.status) console.error('Upload operation failed:', e.code || e.name);
-      send(e.status || 500, { error: e.status ? e.message : 'Server error. Please retry or contact Jordan.' });
+      send(e.status || 500, { error: e.status ? e.message : 'Server error. Please retry or contact Jordan.', ...(e.publicCode ? { code: e.publicCode } : {}) });
     }
   });
   // Each request carries at most 8 MiB; this is an inactivity timeout, not a whole-file deadline.

@@ -9,7 +9,7 @@
   <link rel="icon" type="image/png" href="/assets/favicon/favicon-96x96.png" sizes="96x96">
   <link rel="stylesheet" href="/assets/css/style.css">
   <link rel="stylesheet" href="/upload/upload.css?v=20261113-2">
-  <script src="/upload/upload.js?v=20261113-6" defer></script>
+  <script src="/upload/upload.js?v=20261113-7" defer></script>
 </head>
 <body>
   <main class="upload-wrap">
@@ -68,7 +68,7 @@
           <div><label for="limit">Maximum ZIP size (GB)</label><input id="limit" type="number" min="1" max="500" value="20" required></div></div>
           <button>Create link + password</button>
         </form>
-        <div id="newInvite" class="card" hidden><h2>Share with your client</h2><p class="small">Copy these details now. The password is shown only once.</p><textarea id="shareDetails" rows="5" readonly aria-label="Invitation details"></textarea><button id="copyInvite" class="secondary">Copy invitation</button><p id="copyStatus" role="status"></p></div>
+        <div id="newInvite" class="card" hidden><h2>Share with your client</h2><p class="small">Copy these details, or use Copy invite link in the inbox later.</p><textarea id="shareDetails" rows="5" readonly aria-label="Invitation details"></textarea><button id="copyInvite" class="secondary">Copy invitation</button><p id="copyStatus" role="status"></p></div>
         <form id="editForm" class="card" hidden>
           <h2>Edit upload invitation</h2>
           <p id="editState" class="meta"></p>
@@ -76,7 +76,7 @@
           <button id="copyEditLink" type="button" class="secondary">Copy link</button>
           <label for="editLabel">Client / project</label><input id="editLabel" maxlength="120" required>
           <label for="editPassword">Change password</label><input id="editPassword" type="text" maxlength="256" autocomplete="off" placeholder="Leave blank to keep the current password">
-          <p class="small">The current password cannot be displayed. Changing it signs clients out; they can sign in again to resume their ZIP.</p>
+          <p class="small">Leave blank to keep the current password. Changing it signs clients out; they can sign in again to resume their ZIP.</p>
           <label for="editExpires">Expiry (your local time)</label><input id="editExpires" type="datetime-local" required>
           <label for="editLimit">Maximum ZIP size (GB)</label><input id="editLimit" type="number" min="0.000000001" max="500" step="any" required>
           <p class="small">Editing keeps the same link. Completed invitations stay closed to further uploads.</p>

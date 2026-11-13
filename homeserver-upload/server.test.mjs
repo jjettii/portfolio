@@ -33,7 +33,7 @@ test('admin authentication, private listings, generated password and origin poli
   const f = await fixture(t);
   assert.equal((await f.request('/admin')).status, 401);
   assert.equal((await f.request('/admin/capabilities')).status, 401);
-  assert.deepEqual((await f.request('/admin/capabilities', 'GET', undefined, f.admin)).data, { apiVersion: 2, maxSize: 500000000000 });
+  assert.deepEqual((await f.request('/admin/capabilities', 'GET', undefined, f.admin)).data, { apiVersion: 3, maxSize: 500000000000 });
   assert.equal((await f.request('/login', 'POST', { password: 'wrong' })).status, 401);
   const row = await f.invite(); assert.ok(row.password.length >= 24);
   const list = await f.request('/admin', 'GET', undefined, f.admin);
@@ -267,4 +267,40 @@ test('existing SQLite installations migrate additively and legacy sessions revok
   await f.restart();
   assert.equal((await f.request(`/client/${id}`, 'GET', undefined, token)).status, 401);
   assert.ok(await f.unlock({ id, password: 'replacement' }));
+});
+
+test('full invitation copying is admin-only and passwords are encrypted at rest across restarts', async t => {
+  const f = await fixture(t), row = await f.invite({ password: 'client project password' }), token = await f.unlock(row);
+  assert.equal((await f.request(`/admin/${row.id}/invitation`, 'POST', {})).status, 401);
+  assert.equal((await f.request(`/admin/${row.id}/invitation`, 'POST', {}, token)).status, 401);
+  await f.restart();
+  const invite = await f.request(`/admin/${row.id}/invitation`, 'POST', {}, f.admin);
+  assert.equal(invite.status, 200); assert.equal(invite.data.password, row.password); assert.equal(invite.data.id, row.id);
+  assert.equal((await f.request(`/admin/${row.id}`, 'GET', undefined, f.admin)).data.password_box, undefined);
+  const db = new DatabaseSync(path.join(f.root, 'uploads.sqlite'));
+  const box = db.prepare('SELECT password_box FROM invites WHERE id=?').get(row.id).password_box; db.close();
+  assert.match(box, /^v1\./); assert.ok(!box.includes(row.password));
+  await f.request(`/admin/${row.id}`, 'PATCH', { password: 'new password' }, f.admin);
+  assert.equal((await f.request(`/admin/${row.id}/invitation`, 'POST', {}, f.admin)).data.password, 'new password');
+});
+
+test('legacy invitations require the correct password once without changing their client sessions', async t => {
+  const f = await fixture(t), row = await f.invite({ password: 'original password' }), token = await f.unlock(row);
+  const db = new DatabaseSync(path.join(f.root, 'uploads.sqlite'));
+  db.prepare('UPDATE invites SET password_box=NULL WHERE id=?').run(row.id); db.close();
+  const missing = await f.request(`/admin/${row.id}/invitation`, 'POST', {}, f.admin);
+  assert.equal(missing.status, 409); assert.equal(missing.data.code, 'password_required');
+  assert.equal((await f.request(`/admin/${row.id}/invitation`, 'POST', { password: 'wrong password' }, f.admin)).status, 400);
+  assert.equal((await f.request(`/admin/${row.id}/invitation`, 'POST', { password: row.password }, f.admin)).data.password, row.password);
+  assert.equal((await f.request(`/client/${row.id}`, 'GET', undefined, token)).status, 200);
+  await f.restart();
+  assert.equal((await f.request(`/admin/${row.id}/invitation`, 'POST', {}, f.admin)).data.password, row.password);
+});
+
+test('encrypted passwords cannot be moved between invitation IDs', async t => {
+  const f = await fixture(t), a = await f.invite({ password: 'first password' }), b = await f.invite({ password: 'second password' });
+  const db = new DatabaseSync(path.join(f.root, 'uploads.sqlite'));
+  db.prepare('UPDATE invites SET password_box=(SELECT password_box FROM invites WHERE id=?) WHERE id=?').run(a.id, b.id); db.close();
+  assert.equal((await f.request(`/admin/${b.id}/invitation`, 'POST', {}, f.admin)).data.code, 'password_required');
+  assert.equal((await f.request(`/admin/${b.id}/invitation`, 'POST', { password: b.password }, f.admin)).data.password, b.password);
 });

@@ -14,7 +14,7 @@
       ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body ? { 'Content-Type': 'application/json' } : {}),
     }, body: body ? JSON.stringify(body) : undefined, cache: 'no-store', referrerPolicy: 'no-referrer' });
     const data = await r.json();
-    if (!r.ok) throw Object.assign(Error(data.error || 'Request failed.'), { status: r.status });
+    if (!r.ok) throw Object.assign(Error(data.error || 'Request failed.'), { status: r.status, code: data.code });
     return data;
   }
   function bind(id, fn) {
@@ -116,7 +116,7 @@
     const data = await api('/login', { method: 'POST', body: { password: $('adminPassword').value } });
     try {
       const caps = await api('/admin/capabilities', { token: data.token });
-      if (caps.apiVersion < 2 || caps.maxSize !== 500 * 1000 ** 3) throw Error('The homeserver upload service needs updating. Install the latest server.mjs, restart portfolio-uploads, then sign in again.');
+      if (caps.apiVersion < 3 || caps.maxSize !== 500 * 1000 ** 3) throw Error('The homeserver upload service needs updating for full invitation copying. Install the latest server.mjs, restart portfolio-uploads, then sign in again.');
     } catch (e) {
       if (e.status === 404) throw Error('The homeserver is running an older upload service. Install the latest server.mjs and restart portfolio-uploads to enable the 500 GB limit and editing.');
       throw e;
@@ -133,6 +133,30 @@
       const state = row.state !== 'complete' && row.expires < Date.now() ? 'Expired' : row.state;
       meta.textContent = `${state} · ${row.id}\n${row.filename || 'Waiting for one ZIP'}${row.size ? ` · ${size(row.size)}` : ''}\nExpires ${new Date(row.expires).toLocaleString()}${row.state === 'uploading' ? `\n${Math.floor(row.offset / row.size * 100)}% received` : ''}`;
       card.append(meta);
+      const copy = document.createElement('button'); copy.textContent = 'Copy invite link';
+      const copyStatus = document.createElement('p'); copyStatus.className = 'small'; copyStatus.setAttribute('role', 'status');
+      const passwordForm = document.createElement('form'); passwordForm.hidden = true;
+      const hint = document.createElement('p'); hint.className = 'small'; hint.textContent = 'This older invitation needs its current password once. After verification, future copies include it automatically.';
+      const passwordLabel = document.createElement('label'); passwordLabel.textContent = 'Current invitation password';
+      const passwordInput = document.createElement('input'); passwordInput.id = `copyPassword-${row.id}`; passwordInput.type = 'password'; passwordInput.autocomplete = 'off'; passwordInput.maxLength = 256; passwordInput.required = true;
+      passwordLabel.htmlFor = passwordInput.id;
+      const copyWithPassword = document.createElement('button'); copyWithPassword.type = 'submit'; copyWithPassword.className = 'secondary'; copyWithPassword.textContent = 'Verify password and copy';
+      passwordForm.append(hint, passwordLabel, passwordInput, copyWithPassword);
+      async function copyInvitation(password) {
+        clearError(); copy.disabled = true; copyWithPassword.disabled = true; copyStatus.textContent = '';
+        try {
+          const invite = await api(`/admin/${row.id}/invitation`, { token: adminToken, method: 'POST', body: password === undefined ? {} : { password } });
+          try { await navigator.clipboard.writeText(invitationText(invite, invite.password)); copyStatus.textContent = 'Invitation copied.'; }
+          catch { showShareDetails(invite, invite.password); copyStatus.textContent = 'Copy the invitation text from the share box above.'; }
+          passwordInput.value = ''; passwordForm.hidden = true;
+        } catch (e) {
+          if (e.code === 'password_required') { passwordForm.hidden = false; passwordInput.focus(); }
+          copyStatus.textContent = e.message;
+        } finally { copy.disabled = false; copyWithPassword.disabled = false; }
+      }
+      copy.addEventListener('click', () => copyInvitation());
+      passwordForm.addEventListener('submit', e => { e.preventDefault(); return copyInvitation(passwordInput.value); });
+      card.append(copy, copyStatus, passwordForm);
       const edit = document.createElement('button'); edit.textContent = 'Edit invitation'; edit.className = 'secondary';
       edit.addEventListener('click', async () => {
         clearError(); edit.disabled = true;
@@ -162,7 +186,7 @@
   }
   bind('refresh', refresh);
   function closeEditor() {
-    editingId = ''; originalExpiry = ''; $('editPassword').value = ''; $('editLink').value = ''; show('editForm', false);
+    editingId = ''; originalExpiry = ''; $('editPassword').value = ''; $('editLink').value = ''; show('editForm', false); show('createForm');
   }
   async function openEditor(id) {
     const row = await api(`/admin/${id}`, { token: adminToken });
@@ -173,12 +197,15 @@
     $('editExpires').value = originalExpiry;
     $('editLink').value = shareLink(id);
     $('editState').textContent = `${row.id} · ${row.state}${row.state === 'complete' ? ' · This invitation has already been used.' : ''}`;
-    $('editStatus').textContent = ''; show('editForm'); $('editForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $('editStatus').textContent = ''; show('createForm', false); show('newInvite', false); show('editForm'); $('editForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   bind('copyEditLink', async () => { await navigator.clipboard.writeText($('editLink').value); $('editStatus').textContent = 'Link copied.'; });
   $('cancelEdit').addEventListener('click', closeEditor);
+  function invitationText(row, password) {
+    return `Upload: ${shareLink(row.id)}\n${password === undefined ? 'Password: unchanged (use the password previously shared)' : `Password: ${password}`}\nExpires: ${new Date(row.expires).toLocaleString()}\nPlease send all files in a single .ZIP file (maximum ${size(row.maxSize)}).`;
+  }
   function showShareDetails(row, password) {
-    $('shareDetails').value = `Upload: ${shareLink(row.id)}\n${password === undefined ? 'Password: unchanged (use the password previously shared)' : `Password: ${password}`}\nExpires: ${new Date(row.expires).toLocaleString()}\nPlease send all files in a single .ZIP file (maximum ${size(row.maxSize)}).`;
+    $('shareDetails').value = invitationText(row, password);
     show('newInvite'); $('copyStatus').textContent = '';
   }
   bind('editForm', async () => {
