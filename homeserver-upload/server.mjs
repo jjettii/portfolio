@@ -2,11 +2,12 @@ import http from 'node:http';
 import { DatabaseSync } from 'node:sqlite';
 import { randomBytes, randomUUID, scrypt, timingSafeEqual, createHmac, createHash, createCipheriv, createDecipheriv } from 'node:crypto';
 import { promisify } from 'node:util';
-import { mkdir, open, rename, rm, stat, statfs } from 'node:fs/promises';
+import { mkdir, open, rm, stat, statfs } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ensureStorageSchema, safePath, publishArchive, recoverStorage } from './storage.mjs';
 
 const derive = promisify(scrypt);
 const CHUNK = 8 * 1024 * 1024;
@@ -14,6 +15,7 @@ const GiB = 1024 ** 3;
 const GB = 1000 ** 3;
 const fail = (status, message) => Object.assign(new Error(message), { status });
 const equal = (a, b) => Buffer.byteLength(a) === Buffer.byteLength(b) && timingSafeEqual(Buffer.from(a), Buffer.from(b));
+const zipExtension = filename => typeof filename === 'string' ? filename.match(/\.zip$/i)?.[0] : undefined;
 
 export async function createUploadServer(config) {
   const { root, adminSecret, signingKey, origin = 'https://www.jordanettinger.com', trustProxy = false } = config;
@@ -36,6 +38,8 @@ export async function createUploadServer(config) {
   if (!db.prepare('PRAGMA table_info(invites)').all().some(column => column.name === 'password_box')) {
     db.exec('ALTER TABLE invites ADD COLUMN password_box TEXT');
   }
+  ensureStorageSchema(db);
+  recoverStorage(db, root);
   const passwordKey = createHash('sha256').update('portfolio-upload-password-v1\0').update(signingKey).digest();
   function sealPassword(id, password) {
     const nonce = randomBytes(12), cipher = createCipheriv('aes-256-gcm', passwordKey, nonce);
@@ -55,6 +59,22 @@ export async function createUploadServer(config) {
   }
   const get = id => db.prepare('SELECT * FROM invites WHERE id = ?').get(id);
   const location = (id, ext) => path.join(root, `${id}.${ext}`);
+  // Compatibility paths for archives completed before storage_name was introduced.
+  const archiveLocation = row => path.join(root, `${row.id}${zipExtension(row.filename) || '.zip'}`);
+  async function storedArchive(row) {
+    if (row.storage_name) return safePath(root, row.storage_name);
+    const archive = archiveLocation(row);
+    try { await stat(archive); return archive; }
+    catch (e) { if (e.code !== 'ENOENT') throw e; }
+    const legacy = location(row.id, 'file');
+    await stat(legacy);
+    return legacy;
+  }
+  async function removeArchive(row) {
+    if (row.storage_name) await rm(safePath(root, row.storage_name), { force: true });
+    await rm(archiveLocation(row), { force: true });
+    await rm(location(row.id, 'file'), { force: true });
+  }
   const locks = new Set();
   const buckets = new Map();
   let hashing = 0;
@@ -110,8 +130,18 @@ export async function createUploadServer(config) {
   async function complete(row) {
     if (row.state === 'complete') return;
     if (row.state !== 'uploading' || row.offset !== row.size) throw fail(409, 'Upload is not finished.');
-    try { await rename(location(row.id, 'part'), location(row.id, 'file')); }
-    catch (e) { if (e.code !== 'ENOENT' || (await stat(location(row.id, 'file'))).size !== row.size) throw e; }
+    row = get(row.id);
+    if (row.storage_source) {
+      publishArchive(db, root, row);
+    } else if (!row.storage_name) {
+      // Older versions may already have renamed the part before a crash.
+      try { await stat(location(row.id, 'part')); publishArchive(db, root, row, `${row.id}.part`); }
+      catch (e) {
+        if (e.code !== 'ENOENT') throw e;
+        const existing = await storedArchive(row);
+        if ((await stat(existing)).size !== row.size) throw Error('Archive size mismatch');
+      }
+    }
     if (process.platform !== 'win32') {
       const directory = await open(root, 'r');
       try { await directory.sync(); } finally { await directory.close(); }
@@ -120,15 +150,17 @@ export async function createUploadServer(config) {
   }
   // Recover a crash between durable rename and the SQLite commit.
   for (const row of db.prepare("SELECT * FROM invites WHERE state='uploading' AND offset=size").all()) {
-    try { await stat(location(row.id, 'file')); await complete(row); } catch (e) { if (e.code !== 'ENOENT') throw e; }
+    try { await stat(await storedArchive(row)); await complete(row); } catch (e) { if (e.code !== 'ENOENT') throw e; }
   }
   async function clean() {
     for (const row of db.prepare("SELECT * FROM invites WHERE (expires < ? AND state != 'complete') OR state='deleting'").all(Date.now())) {
       if (locks.has(row.id)) continue;
       await locked(row.id, async () => {
+        const current = get(row.id);
+        if (current.storage_source) publishArchive(db, root, current);
         await rm(location(row.id, 'part'), { force: true });
+        await removeArchive(get(row.id));
         if (row.state === 'deleting') {
-          await rm(location(row.id, 'file'), { force: true });
           db.prepare('DELETE FROM invites WHERE id=?').run(row.id);
         }
       });
@@ -244,7 +276,9 @@ export async function createUploadServer(config) {
         if (parts.length === 3 && req.method === 'DELETE') {
           await locked(id, async () => {
             db.prepare("UPDATE invites SET state='deleting' WHERE id=?").run(id);
-            await rm(location(id, 'part'), { force: true }); await rm(location(id, 'file'), { force: true });
+            const current = get(id);
+            if (current.storage_source) publishArchive(db, root, current);
+            await rm(location(id, 'part'), { force: true }); await removeArchive(get(id));
             db.prepare('DELETE FROM invites WHERE id=?').run(id);
           }); send(200, { ok: true }); return;
         }
@@ -270,7 +304,7 @@ export async function createUploadServer(config) {
         res.setHeader('Content-Disposition', `attachment; filename="upload.zip"; filename*=UTF-8''${encodeURIComponent(row.filename).replace(/['()]/g, escape)}`);
         res.setHeader('Content-Length', row.size === 0 ? 0 : end - start + 1);
         res.writeHead(status);
-        if (!row.size) res.end(); else await pipeline(createReadStream(location(id, 'file'), { start, end }), res);
+        if (!row.size) res.end(); else await pipeline(createReadStream(await storedArchive(row), { start, end }), res);
         return;
       }
       if (parts[1] === 'client' && parts.length >= 3 && parts.length <= 4) {
@@ -283,7 +317,7 @@ export async function createUploadServer(config) {
           if (parts[3] === 'start' && req.method === 'POST') {
             if (current.state === 'complete') throw fail(409, 'This invitation has already been used.');
             const b = await json(req);
-            if (typeof b.filename !== 'string' || !b.filename.toLowerCase().endsWith('.zip') || b.filename.length > 240 || /[\/\\\x00-\x1f\x7f]/.test(b.filename) || !Number.isSafeInteger(b.size) || b.size < 1 || b.size > current.max_size || !/^[a-f0-9]{64}$/.test(b.fingerprint || '')) throw fail(400, 'Choose one ZIP file within the size limit.');
+            if (!zipExtension(b.filename) || !b.filename.isWellFormed() || b.filename.length > 240 || /[\/\\\x00-\x1f\x7f]/.test(b.filename) || !Number.isSafeInteger(b.size) || b.size < 1 || b.size > current.max_size || !/^[a-f0-9]{64}$/.test(b.fingerprint || '')) throw fail(400, 'Choose one ZIP file within the size limit.');
             if (current.state === 'uploading') {
               if (current.filename !== b.filename || current.size !== b.size || current.fingerprint !== b.fingerprint) throw fail(409, 'This invitation is already uploading another file. Select the original ZIP to resume.');
             } else db.prepare("UPDATE invites SET state='uploading',filename=?,size=?,fingerprint=? WHERE id=?").run(b.filename, b.size, b.fingerprint, id);

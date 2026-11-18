@@ -11,7 +11,7 @@ This is a separate, dependency-free Node 24 service on the homeserver. The stati
 - **Edit invitation** hides the new-invitation form while editing; Save or Cancel restores it. Rename the client/project, change its password, set expiry within the next 30 days, change the ZIP limit up to 500 GB, and copy its existing share link. Its ID and link stay the same. Blank edit passwords preserve the current password and client sessions; setting a new password revokes existing client sessions and replaces the encrypted copy. Clients sign in again to resume their original ZIP without losing committed chunks. The limit cannot be reduced below the client's selected ZIP size. Completed invitations remain completed after all edits. Expired invitations that never started can be renewed; expired partial uploads require a new invitation because cleanup may already have removed their bytes.
 - Default limit: 20 GB per invitation, seven-day expiry. Admin may select 1–500 GB (decimal GB, 1 GB = 1,000,000,000 bytes) and 1–30 days. Existing invitations retain their original byte limits. Default total reservation quota: 500 GiB, configurable. A 500 GB invitation fits within the default 500 GiB quota if other active reservations and retained files leave sufficient capacity. Ensure sufficient real free disk capacity. Completed files retain their actual size against quota until deleted; expired invitations release reservations and partial data is cleaned hourly. Completed files are retained until admin deletion. Each chunk checks free disk space with a 256 MiB safety reserve; this service shares disk with other applications, so monitor available space.
 - Password attempts are rate-limited per IP (30/15 minutes), and expensive password derivations have bounded concurrency. Clients can access only their own invitation; admin tokens expire after eight hours, client sessions after seven days. Tokens are held in page memory. CORS allows only the configured website origin. Credentials and signed URLs must not enter access logs.
-- The backend streams sequential 8 MiB chunks to an opaque staging filename with bounded memory, validates exact chunk sizes, flushes each chunk before saving its offset in SQLite, then atomically renames and seals the invitation. No filesystem paths come from client filenames. A single service process owns all writes; **do not run multiple instances against the same data directory**.
+- The backend streams sequential 8 MiB chunks to an opaque staging filename with bounded memory, validates exact chunk sizes, flushes each chunk before saving its offset in SQLite, then publishes the archive without overwriting existing files and seals the invitation. Final filenames use sanitized project/original names and are saved in SQLite. A single service process owns all writes; **do not run multiple instances against the same data directory**.
 - Partial chunks never advance the saved offset. A retry asks the server for its durable offset, so a lost response does not duplicate bytes. Pause/reopen/reselect the original ZIP to resume. A bounded-memory SHA-256 digest chain checks all ZIP bytes before upload/resume, preventing a different file of the same name/size from being spliced into a partial upload. This initial local read can take time for very large ZIPs; it does not send file bytes over the network.
 
 ## Speed and timeouts
@@ -101,7 +101,7 @@ Run this only after confirming the mount and Node prerequisites:
 sudo useradd --system --user-group --no-create-home --shell /usr/sbin/nologin portfolio-uploads
 sudo install -d -m 755 /mnt/storage1/homeserver-uploads/app
 sudo install -d -o portfolio-uploads -g portfolio-uploads -m 700 /mnt/storage1/homeserver-uploads/data
-sudo install -m 644 ~/homeserver-upload-source/server.mjs /mnt/storage1/homeserver-uploads/app/server.mjs
+sudo install -m 644 ~/homeserver-upload-source/server.mjs ~/homeserver-upload-source/storage.mjs ~/homeserver-upload-source/migrate-storage.mjs /mnt/storage1/homeserver-uploads/app/
 sudo install -m 644 ~/homeserver-upload-source/portfolio-uploads.service /etc/systemd/system/portfolio-uploads.service
 ```
 
@@ -149,6 +149,54 @@ Proxy routing and buffering behavior are described in Caddy's official [handle d
 
 ## Operations and rollback
 
+### Readable archive names and migration
+
+Completed archives use the client/project title plus the original ZIP filename, for example `Me test - Lou's Bday.zip`. A duplicate gets a short random suffix, for example `Me test - Lou's Bday - a1b2c3d4.zip`. Collisions are checked case-insensitively and across Unicode normalization forms, including existing files and reserved database names. Publication uses a hard link that refuses to overwrite an existing destination, followed by removal of the source; it requires hard-link support on the data filesystem. Unsupported filesystems fail without deleting the original data.
+
+Storage names replace Windows/Linux path separators, reserved characters and control characters; normalize Unicode; handle Windows device names and trailing spaces/dots; and bound UTF-8 filename lengths. Spaces and apostrophes are retained. UUIDs still identify invitations, tokens, links and `<UUID>.part` staging files. Original upload filenames remain unchanged in SQLite and in the encoded download header.
+
+The additive schema upgrade creates nullable `storage_name` (a basename relative to the configured data root) and `storage_source` (a recovery journal). The final basename is saved before publication and never reconstructed from an editable title. Editing a title after completion does not rename its file. No storage paths are accepted from API callers. Existing UUID `.file` and `.zip` archives remain downloadable until explicitly migrated; new and resumed uploads complete with readable names.
+
+`migrate-storage.mjs` previews existing completed uploads by default. Applying it renames archives without copying their bytes, updates each row's storage reference, and preserves IDs, passwords, original filenames, offsets, sizes and completion timestamps. A durable per-file journal and synced directory operations permit replay after interruption at any file-move step. There is no single transaction spanning SQLite and the filesystem: an interrupted run can leave some files migrated and others pending, and rerunning apply finishes safely. The updated service also replays pending operations before serving requests. Preview lists desired names; collision suffixes are assigned during apply. Migration is idempotent. Do not manually rename files or edit these columns.
+
+Deploy **all three modules**, with no frontend, Caddy, unit or secret changes. From the repository root on Windows:
+
+```powershell
+scp homeserver-upload/server.mjs homeserver-upload/storage.mjs homeserver-upload/migrate-storage.mjs "<your-server-login>@192.168.0.51:~/homeserver-upload-source/"
+```
+
+On the homeserver, pause active uploads, stop the service, and back up the entire app, data directory (including SQLite and WAL files) and private environment file together. Ensure enough disk space for the backup. Run the block as a script so a failed step stops deployment. Run migration as the service account to preserve ownership. Never run migration and the service concurrently; `--service-stopped` acknowledges that requirement and does not itself stop systemd.
+
+```bash
+set -eu
+sudo systemctl stop portfolio-uploads
+upload_backup="/mnt/storage1/homeserver-uploads-backup-$(date +%Y%m%d-%H%M%S)"
+sudo install -d -m 700 "$upload_backup"
+sudo cp -a /mnt/storage1/homeserver-uploads/data "$upload_backup/data"
+sudo cp -a /mnt/storage1/homeserver-uploads/app "$upload_backup/app"
+sudo cp -a /etc/portfolio-uploads.env "$upload_backup/portfolio-uploads.env"
+for upload_module in server.mjs storage.mjs migrate-storage.mjs; do
+  /opt/portfolio-node24/bin/node --check "$HOME/homeserver-upload-source/$upload_module"
+  sudo install -m 644 "$HOME/homeserver-upload-source/$upload_module" /mnt/storage1/homeserver-uploads/app/
+done
+sudo -u portfolio-uploads /opt/portfolio-node24/bin/node /mnt/storage1/homeserver-uploads/app/migrate-storage.mjs /mnt/storage1/homeserver-uploads/data
+```
+
+Review the preview, then apply while the service remains stopped:
+
+```bash
+sudo -u portfolio-uploads /opt/portfolio-node24/bin/node /mnt/storage1/homeserver-uploads/app/migrate-storage.mjs /mnt/storage1/homeserver-uploads/data --apply --service-stopped
+sudo systemctl start portfolio-uploads
+sudo systemctl status portfolio-uploads --no-pager
+curl -i http://127.0.0.1:8789/incoming/admin
+```
+
+**A service restart is required**; stop/start above performs it. No `daemon-reload` is needed. The unauthenticated HTTP check should return 401. If migration fails, keep the service stopped, resolve the issue and rerun apply; do not delete its journal columns or overwrite the data directory. A missing archive or wrong size fails preflight before new moves begin. Review any pending recovery listed in preview.
+
+Acceptance: download migrated archives and compare hashes with the originals; complete two invitations titled `Me test` uploading `Lou's Bday.zip`; confirm one exact readable name and one suffixed name; rename a project in the admin page and confirm download still works; delete the test invitations and confirm both archives disappear. Partial uploads resume using the same UUID and offset.
+
+Older backends cannot read the new stored names. Prefer a forward fix preserving the journal. Restoring an older app alone is insufficient; a full stopped-service restore of the matching app/data/config backup discards subsequent uploads and edits, so preserve the current data before considering that rollback.
+
 Back up `/etc/portfolio-uploads.env` and the entire data directory together while the service is stopped; SQLite metadata and object files must be consistent. Don't commit secrets, SQLite files or client files. Rotate the signing key to revoke all outstanding tokens; rotate the admin secret to change admin login (existing admin tokens also need a signing-key rotation to revoke immediately). Retain the signing key during ordinary upgrades so in-progress client sessions continue working. Expired partials are removed hourly and at startup; completed files require explicit admin deletion.
 
-To update, stop `portfolio-uploads`, replace the app file, then start it; never run two service instances. Existing partial uploads resume after a normal restart. To roll back, remove only the `/incoming/*` Caddy handler, validate/reload Caddy and stop/disable `portfolio-uploads`. Keep the data directory and secrets for recovery. The existing transfer service stays on port 8788 and is independent.
+To update, stop `portfolio-uploads`, replace all three app modules, then start it; never run two service instances. Existing partial uploads resume after a normal restart. To roll back, remove only the `/incoming/*` Caddy handler, validate/reload Caddy and stop/disable `portfolio-uploads`. Keep the data directory and secrets for recovery. The existing transfer service stays on port 8788 and is independent.
