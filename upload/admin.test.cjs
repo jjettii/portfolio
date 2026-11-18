@@ -13,6 +13,7 @@ function page(rows = [], pageOptions = {}) {
     append(...children) { this.children.push(...children); }
     setAttribute(name, value) { this[name] = value; }
     focus() {}
+    reset() {}
     replaceChildren() { this.children = []; }
     querySelector(selector) { if (selector === 'button[type="submit"]') return this.submit || null; return this.button ||= new Element('button'); }
     scrollIntoView() {}
@@ -55,7 +56,7 @@ function page(rows = [], pageOptions = {}) {
 }
 
 test('admin creates an invitation with the chosen password and shares returned credentials', async () => {
-  const p = page(); await p.login();
+  const p = page(); await p.login(); await p.$('newUpload').fire('click');
   p.$('label').value = 'Client project'; p.$('invitePassword').value = 'chosen password'; p.$('limit').value = '500';
   await p.$('createForm').fire('submit');
   const create = p.calls.find(call => call.method === 'POST' && call.route === '/admin');
@@ -66,7 +67,7 @@ test('admin creates an invitation with the chosen password and shares returned c
 test('admin edits existing details, keeps unchanged expiry, and submits with the Save button', async () => {
   const row = { id: 'existing', label: 'Original', maxSize: 20000000000, expires: Date.now() + 86400000, state: 'waiting' };
   const p = page([row]); await p.login();
-  await p.$('inbox').children[0].children.find(child => child.textContent === 'Edit invitation').fire('click');
+  await p.$('inbox').children[0].fire('click');
   assert.equal(p.$('editForm').hidden, false); assert.match(p.$('editLink').value, /id=existing$/);
   assert.equal(p.$('createForm').hidden, true);
   p.$('editLabel').value = 'Renamed'; p.$('editPassword').value = 'replacement'; p.$('editLimit').value = '500';
@@ -74,18 +75,19 @@ test('admin edits existing details, keeps unchanged expiry, and submits with the
   const edit = p.calls.find(call => call.method === 'PATCH');
   assert.equal(edit.route, '/admin/existing'); assert.equal(edit.body.label, 'Renamed');
   assert.equal(edit.body.password, 'replacement'); assert.equal(edit.body.maxSize, 500000000000);
-  assert.equal(edit.body.expires, undefined); assert.equal(p.$('editForm').hidden, true);
-  assert.equal(p.$('createForm').hidden, false);
-  assert.match(p.$('shareDetails').value, /Password: replacement/); assert.match(p.$('shareDetails').value, /id=existing/);
+  assert.equal(edit.body.expires, undefined); assert.equal(p.$('editForm').hidden, false);
+  assert.equal(p.$('adminList').hidden, true);
+  assert.match(p.$('editStatus').textContent, /Changes saved/); assert.match(p.$('editLink').value, /id=existing/);
+  assert.equal(p.$('editLabel').value, 'Renamed');
   assert.equal(p.$('copyEditLink').disabled, undefined);
 });
 
 test('blank edit password preserves the password; sign-out clears editor and share credentials', async () => {
   const p = page([{ id: 'existing', label: 'Original', maxSize: 20000000000, expires: Date.now() + 86400000, state: 'waiting' }]);
-  await p.login(); await p.$('inbox').children[0].children.find(child => child.textContent === 'Edit invitation').fire('click');
+  await p.login(); await p.$('inbox').children[0].fire('click');
   await p.$('editForm').fire('submit');
   assert.equal(p.calls.find(call => call.method === 'PATCH').body.password, undefined);
-  assert.match(p.$('shareDetails').value, /Password: unchanged/);
+  assert.match(p.$('editStatus').textContent, /Changes saved/);
   p.$('invitePassword').value = 'not saved'; await p.$('logout').fire('click');
   assert.equal(p.$('invitePassword').value, ''); assert.equal(p.$('shareDetails').value, '');
   assert.equal(p.$('editPassword').value, ''); assert.equal(p.$('dashboard').hidden, true);
@@ -100,19 +102,20 @@ test('old backends show an upgrade message before custom passwords or editing ca
   assert.equal(p.calls.some(call => call.route === '/admin'), false);
 });
 
-test('Cancel restores the new invitation form and hides the editor', async () => {
+test('Cancel returns to the upload list and hides the editor', async () => {
   const p = page([{ id: 'existing', label: 'Original', maxSize: 20000000000, expires: Date.now() + 86400000, state: 'waiting' }]);
-  await p.login(); await p.$('inbox').children[0].children.find(child => child.textContent === 'Edit invitation').fire('click');
+  await p.login(); await p.$('inbox').children[0].fire('click');
   assert.equal(p.$('createForm').hidden, true);
   await p.$('cancelEdit').fire('click');
-  assert.equal(p.$('createForm').hidden, false); assert.equal(p.$('editForm').hidden, true);
+  assert.equal(p.$('adminList').hidden, false); assert.equal(p.$('createForm').hidden, true); assert.equal(p.$('editForm').hidden, true);
 });
 
-test('Copy invite link appears before Edit and copies the entire current invitation text', async () => {
+test('Upload details copy the entire current invitation text', async () => {
   const row = { id: 'existing', label: 'Project', password: 'stored password', maxSize: 350000000000, expires: Date.now() + 86400000, state: 'waiting' };
   const p = page([row]); await p.login();
-  const buttons = p.$('inbox').children[0].children.filter(child => child.tagName === 'BUTTON');
-  assert.deepEqual(buttons.map(button => button.textContent), ['Copy invite link', 'Edit invitation', 'Delete invitation + file']);
+  await p.$('inbox').children[0].fire('click');
+  const buttons = p.$('detailActions').children[0].children.filter(child => child.tagName === 'BUTTON');
+  assert.deepEqual(buttons.map(button => button.textContent), ['Copy invite link', 'Delete invitation + file']);
   await buttons[0].fire('click');
   assert.match(p.clipboard[0], /^Upload: https:\/\/www.jordanettinger.com\/upload\/\?id=existing\nPassword: stored password\nExpires:/);
   assert.match(p.clipboard[0], /Please send all files in a single \.ZIP file \(maximum 350 GB\)\.$/);
@@ -122,7 +125,8 @@ test('Copy invite link appears before Edit and copies the entire current invitat
 test('legacy invitation copying asks for its password once and copies the complete text', async () => {
   const p = page([{ id: 'existing', label: 'Project', maxSize: 350000000000, expires: Date.now() + 86400000, state: 'waiting' }], { legacyInvite: true });
   await p.login();
-  const card = p.$('inbox').children[0];
+  await p.$('inbox').children[0].fire('click');
+  const card = p.$('detailActions').children[0];
   await card.children.find(child => child.textContent === 'Copy invite link').fire('click');
   const form = card.children.find(child => child.tagName === 'FORM');
   assert.equal(form.hidden, false);
@@ -130,4 +134,26 @@ test('legacy invitation copying asks for its password once and copies the comple
   await form.fire('submit');
   assert.match(p.clipboard[0], /Password: original password/);
   assert.equal(input.value, ''); assert.equal(form.hidden, true);
+});
+
+
+test('dashboard separates list, creation, and details; Done refreshes the list', async () => {
+  const p = page(); await p.login();
+  assert.equal(p.$('adminList').hidden, false);
+  assert.equal(p.$('adminNew').hidden, true);
+  assert.equal(p.$('adminDetail').hidden, true);
+  assert.equal(p.$('adminIntro').hidden, true);
+  await p.$('newUpload').fire('click');
+  assert.equal(p.$('adminList').hidden, true);
+  assert.equal(p.$('adminNew').hidden, false);
+  assert.equal(p.$('createForm').hidden, false);
+  p.$('label').value = 'New client';
+  await p.$('createForm').fire('submit');
+  assert.equal(p.$('createForm').hidden, true);
+  assert.equal(p.$('newInvite').hidden, false);
+  assert.equal(p.$('doneNew').hidden, false);
+  await p.$('doneNew').fire('click');
+  assert.equal(p.$('adminList').hidden, false);
+  assert.equal(p.$('adminNew').hidden, true);
+  assert.equal(p.$('shareDetails').value, '');
 });

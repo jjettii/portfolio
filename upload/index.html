@@ -8,8 +8,8 @@
   <title>File Upload — Jordan Ettinger</title>
   <link rel="icon" type="image/png" href="/assets/favicon/favicon-96x96.png" sizes="96x96">
   <link rel="stylesheet" href="/assets/css/style.css">
-  <link rel="stylesheet" href="/upload/upload.css?v=20261113-2">
-  <script src="/upload/upload.js?v=20261113-7" defer></script>
+  <link rel="stylesheet" href="/upload/upload.css?v=20261118-1">
+  <script src="/upload/upload.js?v=20261118-1" defer></script>
 </head>
 <body>
   <main class="upload-wrap">
@@ -48,8 +48,8 @@
       <div class="admin-toggle"><a class="admin-link" href="/upload/?admin=1">Admin</a></div>
     </section>
     <section id="adminView" hidden>
-      <h1>Upload inbox</h1>
-      <p class="sub">Create invitations and manage incoming files.</p>
+      <div id="adminIntro"><h1>Admin</h1>
+      <p class="sub">Sign in to manage uploads.</p></div>
       <form id="adminLogin">
         <div class="upload-field">
           <label for="adminPassword">Admin password</label>
@@ -58,9 +58,15 @@
         <button>Sign in</button>
       </form>
       <div id="dashboard" hidden>
-        <div class="actions"><button id="refresh" class="secondary">Refresh inbox</button><button id="logout" class="secondary">Sign out</button></div>
-        <form id="createForm" class="card">
-          <h2>New upload invitation</h2>
+        <div id="adminList">
+          <div class="admin-header"><h1>Uploads</h1><button id="newUpload" type="button">+ New Upload</button></div>
+          <div id="inbox" class="upload-list"></div>
+          <div class="admin-signout"><button id="logout" type="button" class="text-button">Sign out</button></div>
+        </div>
+        <div id="adminNew" hidden>
+        <button id="backFromNew" type="button" class="text-button admin-back">← Back to uploads</button>
+        <form id="createForm">
+          <h1>New Upload</h1>
           <label for="label">Client / project</label><input id="label" maxlength="120" required>
           <label for="invitePassword">Upload password</label><input id="invitePassword" type="text" maxlength="256" autocomplete="off" placeholder="Password you'll share with the client">
           <p class="small">Choose your own password, or leave blank to generate one.</p>
@@ -68,9 +74,13 @@
           <div><label for="limit">Maximum ZIP size (GB)</label><input id="limit" type="number" min="1" max="500" value="20" required></div></div>
           <button>Create link + password</button>
         </form>
-        <div id="newInvite" class="card" hidden><h2>Share with your client</h2><p class="small">Copy these details, or use Copy invite link in the inbox later.</p><textarea id="shareDetails" rows="5" readonly aria-label="Invitation details"></textarea><button id="copyInvite" class="secondary">Copy invitation</button><p id="copyStatus" role="status"></p></div>
-        <form id="editForm" class="card" hidden>
-          <h2>Edit upload invitation</h2>
+        <div id="newInvite" class="card" hidden><h2>Share with your client</h2><p class="small">Copy these details, or open this upload later to copy its invitation.</p><textarea id="shareDetails" rows="5" readonly aria-label="Invitation details"></textarea><button id="copyInvite" class="secondary">Copy invitation</button><p id="copyStatus" role="status"></p></div>
+        <button id="doneNew" type="button" class="secondary compact" hidden>Done</button>
+        </div>
+        <div id="adminDetail" hidden>
+        <button id="backFromDetail" type="button" class="text-button admin-back">← Back to uploads</button>
+        <form id="editForm" hidden>
+          <h1>Edit Upload</h1>
           <p id="editState" class="meta"></p>
           <label for="editLink">Share link</label><input id="editLink" readonly>
           <button id="copyEditLink" type="button" class="secondary">Copy link</button>
@@ -84,11 +94,10 @@
           <button id="cancelEdit" type="button" class="secondary">Cancel</button>
           <p id="editStatus" class="small" role="status"></p>
         </form>
-        <h2>Existing invitations</h2>
-        <div id="inbox"></div>
+        <div id="detailActions"></div>
+        </div>
       </div>
-      <hr class="upload-divider">
-      <div class="admin-toggle"><a class="admin-link" href="/upload/">Back to upload</a></div>
+      <div id="adminBack" class="admin-toggle"><a class="admin-link" href="/upload/">← Back to upload</a></div>
     </section>
     <p id="error" role="alert" hidden></p>
   </main>

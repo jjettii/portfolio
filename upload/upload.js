@@ -121,18 +121,35 @@
       if (e.status === 404) throw Error('The homeserver is running an older upload service. Install the latest server.mjs and restart portfolio-uploads to enable the 500 GB limit and editing.');
       throw e;
     }
-    adminToken = data.token; $('adminPassword').value = ''; show('adminLogin', false); show('dashboard'); await refresh();
+    adminToken = data.token; $('adminPassword').value = ''; show('adminLogin', false); show('adminIntro', false); show('adminBack', false); show('dashboard'); showAdminView('list'); await refresh();
   });
   async function refresh() {
     const rows = await api('/admin', { token: adminToken }); $('inbox').replaceChildren();
     if (!rows.length) { $('inbox').textContent = 'No upload invitations yet.'; return; }
     for (const row of rows) {
-      const card = document.createElement('article'); card.className = 'card';
-      const title = document.createElement('h2'); title.textContent = row.label; card.append(title);
-      const meta = document.createElement('p'); meta.className = 'meta';
-      const state = row.state !== 'complete' && row.expires < Date.now() ? 'Expired' : row.state;
-      meta.textContent = `${state} · ${row.id}\n${row.filename || 'Waiting for one ZIP'}${row.size ? ` · ${size(row.size)}` : ''}\nExpires ${new Date(row.expires).toLocaleString()}${row.state === 'uploading' ? `\n${Math.floor(row.offset / row.size * 100)}% received` : ''}`;
-      card.append(meta);
+      const item = document.createElement('button'); item.type = 'button'; item.className = 'upload-list-item';
+      const info = document.createElement('span'); info.className = 'upload-list-info';
+      const title = document.createElement('span'); title.className = 'upload-list-name'; title.textContent = row.label;
+      const meta = document.createElement('span'); meta.className = 'upload-list-meta';
+      meta.textContent = `${uploadState(row)} · ${row.size ? size(row.size) : 'Waiting for ZIP'} · Expires ${new Date(row.expires).toLocaleDateString()}`;
+      const arrow = document.createElement('span'); arrow.className = 'upload-list-arrow'; arrow.textContent = '›'; arrow.setAttribute('aria-hidden', 'true');
+      info.append(title, meta); item.append(info, arrow);
+      item.addEventListener('click', async () => {
+        clearError(); item.disabled = true;
+        try { await openEditor(row.id); } catch (e) { error(e); } finally { item.disabled = false; }
+      });
+      $('inbox').append(item);
+    }
+  }
+  function uploadState(row) {
+    if (row.state !== 'complete' && row.expires < Date.now()) return 'Expired';
+    if (row.state === 'complete') return 'Complete';
+    if (row.state === 'uploading') return `Uploading ${row.size ? Math.floor(row.offset / row.size * 100) : 0}%`;
+    return 'Waiting';
+  }
+  function renderDetailActions(row) {
+      $('detailActions').replaceChildren();
+      const card = document.createElement('div');
       const copy = document.createElement('button'); copy.textContent = 'Copy invite link';
       const copyStatus = document.createElement('p'); copyStatus.className = 'small'; copyStatus.setAttribute('role', 'status');
       const passwordForm = document.createElement('form'); passwordForm.hidden = true;
@@ -147,7 +164,7 @@
         try {
           const invite = await api(`/admin/${row.id}/invitation`, { token: adminToken, method: 'POST', body: password === undefined ? {} : { password } });
           try { await navigator.clipboard.writeText(invitationText(invite, invite.password)); copyStatus.textContent = 'Invitation copied.'; }
-          catch { showShareDetails(invite, invite.password); copyStatus.textContent = 'Copy the invitation text from the share box above.'; }
+          catch { copyStatus.textContent = invitationText(invite, invite.password); }
           passwordInput.value = ''; passwordForm.hidden = true;
         } catch (e) {
           if (e.code === 'password_required') { passwordForm.hidden = false; passwordInput.focus(); }
@@ -157,11 +174,6 @@
       copy.addEventListener('click', () => copyInvitation());
       passwordForm.addEventListener('submit', e => { e.preventDefault(); return copyInvitation(passwordInput.value); });
       card.append(copy, copyStatus, passwordForm);
-      const edit = document.createElement('button'); edit.textContent = 'Edit invitation'; edit.className = 'secondary';
-      edit.addEventListener('click', async () => {
-        clearError(); edit.disabled = true;
-        try { await openEditor(row.id); } catch (e) { error(e); } finally { edit.disabled = false; }
-      }); card.append(edit);
       if (row.state === 'complete') {
         const download = document.createElement('button'); download.textContent = 'Download ZIP';
         download.addEventListener('click', async () => {
@@ -177,30 +189,39 @@
         clearError(); remove.disabled = true;
         try {
           await api(`/admin/${row.id}`, { token: adminToken, method: 'DELETE' });
-          if (editingId === row.id) closeEditor();
-          show('newInvite', false); $('shareDetails').value = ''; await refresh();
+          showAdminView('list'); await refresh();
         }
         catch (e) { error(e); remove.disabled = false; }
-      }); card.append(remove); $('inbox').append(card);
-    }
+      }); card.append(remove); $('detailActions').append(card);
   }
-  bind('refresh', refresh);
   function closeEditor() {
-    editingId = ''; originalExpiry = ''; $('editPassword').value = ''; $('editLink').value = ''; show('editForm', false); show('createForm');
+    editingId = ''; originalExpiry = ''; $('editPassword').value = ''; $('editLink').value = ''; show('editForm', false);
   }
-  async function openEditor(id) {
-    const row = await api(`/admin/${id}`, { token: adminToken });
-    editingId = id;
+  function showAdminView(view) {
+    clearError(); closeEditor();
+    show('adminList', view === 'list'); show('adminNew', view === 'new'); show('adminDetail', view === 'detail');
+    show('newInvite', false); show('doneNew', false); show('createForm', view === 'new');
+    $('shareDetails').value = ''; $('copyStatus').textContent = '';
+    $('detailActions').replaceChildren();
+  }
+  bind('newUpload', async () => {
+    showAdminView('new'); $('createForm').reset(); $('label').focus();
+  });
+  for (const id of ['backFromNew', 'backFromDetail', 'doneNew', 'cancelEdit']) {
+    bind(id, async () => { showAdminView('list'); await refresh(); });
+  }
+  async function openEditor(id, row) {
+    row ||= await api(`/admin/${id}`, { token: adminToken });
+    showAdminView('detail'); editingId = id;
     $('editLabel').value = row.label; $('editPassword').value = ''; $('editLimit').value = row.maxSize / 1000 ** 3;
     const expiry = new Date(row.expires);
     originalExpiry = new Date(row.expires - expiry.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
     $('editExpires').value = originalExpiry;
     $('editLink').value = shareLink(id);
-    $('editState').textContent = `${row.id} · ${row.state}${row.state === 'complete' ? ' · This invitation has already been used.' : ''}`;
-    $('editStatus').textContent = ''; show('createForm', false); show('newInvite', false); show('editForm'); $('editForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $('editState').textContent = `${uploadState(row)} · ${row.filename || 'Waiting for one ZIP'}${row.size ? ` · ${size(row.size)}` : ''}${row.state === 'complete' ? ' · This invitation has already been used.' : ''}`;
+    $('editStatus').textContent = ''; show('createForm', false); show('newInvite', false); show('editForm'); renderDetailActions(row);
   }
   bind('copyEditLink', async () => { await navigator.clipboard.writeText($('editLink').value); $('editStatus').textContent = 'Link copied.'; });
-  $('cancelEdit').addEventListener('click', closeEditor);
   function invitationText(row, password) {
     return `Upload: ${shareLink(row.id)}\n${password === undefined ? 'Password: unchanged (use the password previously shared)' : `Password: ${password}`}\nExpires: ${new Date(row.expires).toLocaleString()}\nPlease send all files in a single .ZIP file (maximum ${size(row.maxSize)}).`;
   }
@@ -214,15 +235,15 @@
     if ($('editExpires').value !== originalExpiry) body.expires = new Date($('editExpires').value).getTime();
     if ($('editPassword').value !== '') body.password = $('editPassword').value;
     const row = await api(`/admin/${editingId}`, { token: adminToken, method: 'PATCH', body });
-    showShareDetails(row, body.password); closeEditor(); await refresh();
-    $('copyStatus').textContent = 'Changes saved. The upload link stays the same.';
+    await openEditor(editingId, row);
+    $('editStatus').textContent = 'Changes saved. The upload link stays the same.';
   });
   bind('createForm', async () => {
     const row = await api('/admin', { token: adminToken, method: 'POST', body: { label: $('label').value.trim(), password: $('invitePassword').value, days: Number($('days').value), maxSize: Number($('limit').value) * 1000 ** 3 } });
-    showShareDetails(row, row.password); $('invitePassword').value = ''; await refresh();
+    showShareDetails(row, row.password); $('invitePassword').value = ''; show('createForm', false); show('doneNew');
   });
   bind('copyInvite', async () => { await navigator.clipboard.writeText($('shareDetails').value); $('copyStatus').textContent = 'Copied.'; });
   $('logout').addEventListener('click', () => {
-    adminToken = ''; $('shareDetails').value = ''; $('invitePassword').value = ''; closeEditor(); $('inbox').replaceChildren(); show('newInvite', false); show('dashboard', false); show('adminLogin'); clearError();
+    adminToken = ''; $('shareDetails').value = ''; $('invitePassword').value = ''; showAdminView('list'); $('inbox').replaceChildren(); show('newInvite', false); show('dashboard', false); show('adminLogin'); show('adminIntro'); show('adminBack'); clearError();
   });
 })();
